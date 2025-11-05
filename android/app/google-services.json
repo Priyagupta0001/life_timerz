@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1059734523724",
+    "project_id": "lifetimerz-6f83b",
+    "storage_bucket": "lifetimerz-6f83b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1059734523724:android:7172efb97a95bd162009e9",
+        "android_client_info": {
+          "package_name": "com.example.life_timerz"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1059734523724-9gf3v1rjk7s8cg9kol34bsv2avfsoal1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.life_timerz",
+            "certificate_hash": "0f806ea726667dc26bd1bed399979bc3922a139e"
+          }
+        },
+        {
+          "client_id": "1059734523724-rem5626iaci2j0ndud2bhfc01a4rlm04.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBEoZu33fQLb_wvMkIyoghfGbn4s14oMs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1059734523724-rem5626iaci2j0ndud2bhfc01a4rlm04.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
