@@ -1,10 +1,8 @@
-import 'dart:math';
-
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:life_timerz/Profile_page.dart';
-import 'package:life_timerz/login_page.dart';
+import 'package:life_timerz/addtasklist_page.dart';
+import 'package:life_timerz/createnewtimer_page.dart';
+import 'package:life_timerz/notification_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,13 +16,16 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     Center(child: Text("Home", style: TextStyle(fontSize: 20))),
-    Center(child: Text("Tasks", style: TextStyle(fontSize: 20))),
+    AddTaskListPage(),
     ProfilePage(),
-    Center(child: Text("Notifications", style: TextStyle(fontSize: 20))),
+    NotificationPage(),
   ];
+
+  final List<String> _titles = ["Home", "Task", "Profile", "Notification"];
 
   void _onItemTapped(int index) {
     if (index == 2) return;
+
     setState(() {
       _selectedIndex = index > 2 ? index - 1 : index;
     });
@@ -33,14 +34,16 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
-      appBar: _selectedIndex == 2
+      appBar: _selectedIndex == 1
           ? null
           : AppBar(
-              automaticallyImplyLeading: false, //back button remove
+              backgroundColor: const Color.fromARGB(255, 246, 246, 255),
+              automaticallyImplyLeading: false,
               title: Text(
-                "Home",
-                style: TextStyle(
+                _titles[_selectedIndex],
+                style: const TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
                 ),
@@ -53,6 +56,10 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           print("added task");
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => CreateNewTimerPage()),
+          );
         },
         backgroundColor: Color.fromARGB(255, 32, 82, 233),
         shape: CircleBorder(),
@@ -67,7 +74,7 @@ class _HomePageState extends State<HomePage> {
         ),
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          currentIndex: _selectedIndex > 1
+          currentIndex: _selectedIndex >= 2
               ? _selectedIndex + 1
               : _selectedIndex,
           onTap: _onItemTapped,

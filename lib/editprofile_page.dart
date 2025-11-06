@@ -38,38 +38,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
 
       final name = _nameController.text.trim();
-      final newEmail = _emailController.text.trim();
-      final oldEmail = user.email ?? '';
+      final email = _emailController.text.trim();
 
       //update firbase auth
       await user.updateDisplayName(name);
 
-      // Update Firestore record of this existing user
-      // Use old email as document ID (same record)
-      final userDocRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid);
-
-      await userDocRef.set({
-        'name': name,
-        'email': newEmail,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Now, only if email is changed, update it in Auth and Firestore doc ID
-      if (newEmail != oldEmail) {
-        await user.verifyBeforeUpdateEmail(newEmail);
-
-        // Copy old data to new email document
-        final userData = await userDocRef.get();
-        if (userData.exists) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(newEmail)
-              .set(userData.data()!, SetOptions(merge: true));
-          await userDocRef.delete(); // remove old doc if you want
-        }
-      }
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
+        {'name': name, 'updatedAt': FieldValue.serverTimestamp()},
+      ); // remove old doc if you want
 
       // Reload Ui updated
       await user.reload();
@@ -123,7 +99,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      Navigator.pop(context, {'name': name, 'email': newEmail});
+                      Navigator.pop(context, {'name': name, 'email': email});
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color.fromARGB(255, 32, 82, 233),
@@ -156,8 +132,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        backgroundColor: Color.fromARGB(255, 246, 246, 255),
+        //automaticallyImplyLeading: false, //backbutton false
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
@@ -225,7 +203,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
               TextFormField(
                 controller: _emailController,
-                textCapitalization: TextCapitalization.none,
+                //textCapitalization: TextCapitalization.none,
+                readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'Email',
                   labelStyle: const TextStyle(color: Colors.black),
@@ -249,7 +228,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 12),
+          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
           child: SizedBox(
             width: double.infinity,
             height: 46,
