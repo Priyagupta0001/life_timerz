@@ -115,12 +115,10 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 30),
-
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -162,7 +160,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 32, 82, 233),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
+                      horizontal: 25,
                       vertical: 14,
                     ),
                     shape: RoundedRectangleBorder(
@@ -172,10 +170,10 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                 ),
                 if (selectedDateTime != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
+                    padding: const EdgeInsets.only(top: 5.0, bottom: 5.0),
                     child: Text(
                       formattedDateTime,
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 15),
                     ),
                   ),
               ],
@@ -185,7 +183,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(146, 233, 231, 231),
+                color: const Color.fromARGB(146, 236, 224, 224),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -202,8 +200,8 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                         isCountdown = value;
                       });
                     },
-                    activeColor: Colors.white,
-                    activeTrackColor: const Color.fromARGB(255, 32, 82, 233),
+                    activeColor: const Color.fromARGB(255, 32, 82, 233),
+                    activeTrackColor: Colors.white,
                   ),
                 ],
               ),
@@ -223,7 +221,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(146, 241, 239, 239),
+                      backgroundColor: const Color.fromARGB(146, 236, 224, 224),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
                       ),

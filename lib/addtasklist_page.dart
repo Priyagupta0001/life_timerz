@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AddTaskListPage extends StatefulWidget {
-  const AddTaskListPage({super.key});
+  final bool showPinnedOnly;
+
+  AddTaskListPage({super.key, required this.showPinnedOnly});
 
   @override
   State<StatefulWidget> createState() => _AddTaskListPageState();
@@ -13,11 +15,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
   User? user = FirebaseAuth.instance.currentUser;
   // delete timer
   Future<void> _deleteTimer(String id) async {
-    try {
-      await FirebaseFirestore.instance.collection('timers').doc(id).delete();
-    } catch (e) {
-      print("Error deleting timer: $e");
-    }
+    await FirebaseFirestore.instance.collection('timers').doc(id).delete();
   }
 
   // remaining time calculate
@@ -58,33 +56,39 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                   .orderBy('datetime', descending: false)
                   .snapshots(),
               builder: (context, snapshot) {
-                print("Current user UID: ${user!.uid}");
-
+                //print("Current user UID: ${user!.uid}");
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 }
-
                 if (snapshot.hasError) {
-                  print("Firestore error: ${snapshot.error}");
+                  //print("Firestore error: ${snapshot.error}");
                   return const Center(
                     child: Text("Something went wrong. Please try again."),
                   );
                 }
 
-                final docs = snapshot.data!.docs; //list k form m extrct data
+                var docs = snapshot.data!.docs; //list k form m extrct data
 
-                if (docs.isEmpty) {
-                  return const Center(child: Text("No timers yet! Add one."));
+                // if pinned tasks shown only
+                if (widget.showPinnedOnly) {
+                  docs = docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return data['isPinned'] == true;
+                  }).toList();
                 }
 
-                print("Timers fetched: ${docs.length}");
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      widget.showPinnedOnly
+                          ? "No pinned tasks yet!"
+                          : "No timers yet! Add one.",
+                    ),
+                  );
+                }
 
                 return ListView.builder(
                   itemCount: docs.length,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 0,
-                    horizontal: 0,
-                  ),
                   itemBuilder: (context, index) {
                     final timerDoc = docs[index];
                     final timer = timerDoc.data() as Map<String, dynamic>;
@@ -95,6 +99,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                         ? datetimeRaw.toDate()
                         : DateTime.now();
                     final isPinned = timer['isPinned'] ?? false;
+
                     return Dismissible(
                       key: Key(timerDoc.id),
                       background: Container(
@@ -102,7 +107,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                         padding: EdgeInsets.only(right: 20),
                         decoration: BoxDecoration(
                           color: Colors.red,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                         child: Icon(
                           Icons.delete_outlined,
@@ -129,9 +134,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                           ],
                         ),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,13 +147,12 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                                       color: Colors.black87,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
                                     children: [
                                       Icon(
                                         Icons.access_time,
-                                        color: Colors.black,
+                                        color: Colors.black87,
                                         size: 20,
                                       ),
                                       const SizedBox(width: 8),
