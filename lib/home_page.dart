@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:life_timerz/Profile_page.dart';
 import 'package:life_timerz/addtasklist_page.dart';
 import 'package:life_timerz/createnewtimer_page.dart';
+import 'package:life_timerz/customappbar.dart';
+import 'package:life_timerz/custombottomnavbar.dart';
 import 'package:life_timerz/notification_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -31,43 +34,140 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  //bottomnav tap
   void _onItemTapped(int index) {
     if (index == 2) return;
     setState(() {
+      if (index == 1) {
+        _showPinnedOnly = false; //show all tasks
+      }
       _selectedIndex = index > 2 ? index - 1 : index;
     });
   }
 
-  String getRemainingTime(DateTime targetTime) {
-    final now = DateTime.now();
-    final diff = targetTime.difference(now);
-    if (diff.isNegative) return "Time's up!";
-    final d = diff.inDays;
-    final h = diff.inHours % 24;
-    final m = diff.inMinutes % 60;
-    return "$d days, $h hours, $m minutes";
+  //edit tasks
+  void _showEditAlert(String docId, Map<String, dynamic> task) {
+    String title = task['title'];
+    DateTime currentDateTime = (task['datetime'] as Timestamp).toDate();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 50,
+            vertical: 18,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Close button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Edit Task",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(Icons.close, color: Colors.black87),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                const Text(
+                  "Title",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  "Time:",
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+                CountdownText(targetTime: currentDateTime),
+                const SizedBox(height: 30),
+
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // close dialog
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CreateNewTimerPage(
+                            isEditing: true,
+                            docId: docId,
+                            existingTitle: title,
+                            existingDateTime: currentDateTime,
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color.fromARGB(255, 27, 80, 240),
+                      minimumSize: const Size(double.infinity, 45),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "EDIT",
+                      style: TextStyle(
+                        fontSize: 14,
+                        letterSpacing: 1.1,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: false,
-      //APpbar - hide taskpage
       appBar: _selectedIndex == 1
-          ? null
-          : AppBar(
-              backgroundColor: const Color.fromARGB(255, 246, 246, 255),
-              automaticallyImplyLeading: false,
-              title: Text(
-                _titles[_selectedIndex],
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
+          ? CustomAppBar(
+              title: _titles[_selectedIndex],
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.sort, color: Colors.black),
+                  onPressed: () {},
                 ),
-              ),
-              centerTitle: true,
-            ),
+              ],
+            )
+          : CustomAppBar(title: _titles[_selectedIndex]),
 
       body: _selectedIndex == 0
           ? (user == null
@@ -263,6 +363,7 @@ class _HomePageState extends State<HomePage> {
                             GestureDetector(
                               onTap: () {
                                 setState(() {
+                                  _showPinnedOnly = false;
                                   _selectedIndex = 1;
                                 });
                               },
@@ -280,6 +381,7 @@ class _HomePageState extends State<HomePage> {
                                   GestureDetector(
                                     onTap: () {
                                       setState(() {
+                                        _showPinnedOnly = false;
                                         _selectedIndex = 1;
                                       });
                                     },
@@ -366,82 +468,90 @@ class _HomePageState extends State<HomePage> {
                                             datetimeRaw is Timestamp
                                             ? datetimeRaw.toDate()
                                             : DateTime.now();
+                                        final isCompleted =
+                                            task['isCompleted'] ?? false;
 
-                                        return Container(
-                                          margin: const EdgeInsets.only(
-                                            bottom: 14,
+                                        return GestureDetector(
+                                          onTap: () => _showEditAlert(
+                                            docs[index].id,
+                                            task,
                                           ),
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                            horizontal: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                              12,
+                                          child: Container(
+                                            margin: const EdgeInsets.only(
+                                              bottom: 14,
                                             ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.grey.withOpacity(
-                                                  0.1,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 12,
+                                              horizontal: 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.grey
+                                                      .withOpacity(0.1),
+                                                  blurRadius: 6,
+                                                  offset: Offset(0, 3),
                                                 ),
-                                                blurRadius: 6,
-                                                offset: Offset(0, 3),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      "$category - $title",
-                                                      style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        fontSize: 16,
-                                                        color: Colors.black87,
+                                              ],
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        "${task['category']} - ${task['title']}",
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 16,
+                                                          color: Colors.black87,
+                                                        ),
                                                       ),
-                                                    ),
-                                                    const SizedBox(height: 6),
-                                                    Row(
-                                                      children: [
-                                                        Icon(
-                                                          Icons.access_time,
-                                                          color: Colors.black,
-                                                          size: 20,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 8,
-                                                        ),
-                                                        Text(
-                                                          getRemainingTime(
-                                                            datetime,
+                                                      const SizedBox(height: 6),
+                                                      Row(
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.access_time,
+                                                            color:
+                                                                Colors.black87,
+                                                            size: 20,
                                                           ),
-                                                          style: TextStyle(
-                                                            color: Colors.black,
-                                                            fontSize: 12,
+                                                          const SizedBox(
+                                                            width: 8,
                                                           ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
+                                                          CountdownText(
+                                                            key: ValueKey(
+                                                              docs[index].id,
+                                                            ),
+                                                            targetTime:
+                                                                datetime,
+                                                            isCompleted:
+                                                                isCompleted,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                              ),
-                                              Icon(
-                                                Icons.push_pin,
-                                                color: const Color.fromARGB(
-                                                  255,
-                                                  32,
-                                                  82,
-                                                  233,
+                                                Icon(
+                                                  Icons.push_pin,
+                                                  color: const Color.fromARGB(
+                                                    255,
+                                                    32,
+                                                    82,
+                                                    233,
+                                                  ),
+                                                  size: 22,
                                                 ),
-                                                size: 22,
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
                                         );
                                       },
@@ -466,7 +576,13 @@ class _HomePageState extends State<HomePage> {
           print("added task");
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => CreateNewTimerPage()),
+            MaterialPageRoute(
+              builder: (context) => CreateNewTimerPage(
+                isEditing: false,
+                existingTitle: '',
+                existingDateTime: null,
+              ),
+            ),
           );
         },
         backgroundColor: Color.fromARGB(255, 32, 82, 233),
@@ -475,43 +591,83 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-      bottomNavigationBar: ClipRRect(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: _selectedIndex >= 2
-              ? _selectedIndex + 1
-              : _selectedIndex,
-          onTap: _onItemTapped,
-          backgroundColor: Color.fromARGB(255, 246, 246, 255),
-          selectedItemColor: const Color.fromARGB(255, 27, 120, 196),
-          unselectedItemColor: Colors.black,
-          showUnselectedLabels: true,
-          iconSize: 30,
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              label: "Home",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.task_outlined),
-              label: "Task",
-            ),
-            const BottomNavigationBarItem(icon: SizedBox.shrink(), label: ""),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_2_outlined),
-              label: "Profile",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.notifications_outlined),
-              label: "Notification",
-            ),
-          ],
-        ),
+      bottomNavigationBar: CustomBottomNavBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
+      ),
+    );
+  }
+}
+
+class CountdownText extends StatefulWidget {
+  final DateTime targetTime;
+  final bool isCompleted;
+
+  const CountdownText({
+    super.key,
+    required this.targetTime,
+    this.isCompleted = false,
+  });
+
+  @override
+  State<CountdownText> createState() => _CountdownTextState();
+}
+
+class _CountdownTextState extends State<CountdownText> {
+  Timer? _timer;
+  String _remaining = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _updateRemaining(),
+    );
+  }
+
+  void _updateRemaining() {
+    if (!mounted) return;
+
+    if (widget.isCompleted) {
+      setState(() => _remaining = "Completed!");
+      _timer?.cancel();
+      return;
+    }
+
+    final now = DateTime.now();
+    final diff = widget.targetTime.difference(now);
+
+    if (diff.isNegative) {
+      setState(() => _remaining = "Completed!");
+      _timer?.cancel();
+    } else {
+      final days = diff.inDays;
+      final hours = diff.inHours % 24;
+      final minutes = diff.inMinutes % 60;
+      final seconds = diff.inSeconds % 60;
+      setState(() {
+        _remaining =
+            "$days days, $hours hours, $minutes minutes, $seconds seconds";
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _remaining,
+      style: TextStyle(
+        color: Colors.black,
+        fontSize: 12,
+        fontWeight: widget.isCompleted ? FontWeight.bold : FontWeight.normal,
       ),
     );
   }

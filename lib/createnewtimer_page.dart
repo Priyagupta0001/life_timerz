@@ -4,7 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class CreateNewTimerPage extends StatefulWidget {
-  const CreateNewTimerPage({super.key});
+  final bool isEditing;
+  final String? docId;
+  final String? existingTitle;
+  final DateTime? existingDateTime;
+
+  const CreateNewTimerPage({
+    super.key,
+    this.isEditing = false,
+    this.docId,
+    this.existingTitle,
+    this.existingDateTime,
+  });
 
   @override
   State<StatefulWidget> createState() => _CreateNewTimePageState();
@@ -17,7 +28,19 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
   bool isCountdown = false;
 
   DateTime? selectedDateTime;
-  //select dte time
+
+  final titleController = TextEditingController();
+  DateTime? selectedDate;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEditing) {
+      _titleController.text = widget.existingTitle ?? '';
+      selectedDateTime = widget.existingDateTime ?? DateTime.now();
+    }
+  }
+
+  //select date time
   Future<void> _selectDateTime(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -64,31 +87,66 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
     setState(() => _isLoading = true);
     final user = FirebaseAuth.instance.currentUser;
     try {
-      await FirebaseFirestore.instance.collection('timers').add({
-        'uid': user!.uid,
-        'title': _titleController.text.trim(),
-        'category': _categoryController.text.trim(),
-        'datetime': Timestamp.fromDate(selectedDateTime!),
-        'isCountDown': isCountdown,
-        'isPinned': false,
-      });
+      if (widget.isEditing && widget.docId != null) {
+        //UPDATE EXISTING TASK
+        await FirebaseFirestore.instance
+            .collection('timers')
+            .doc(widget.docId)
+            .update({
+              'title': _titleController.text.trim(),
+              'category': _categoryController.text.trim(),
+              'datetime': Timestamp.fromDate(selectedDateTime!),
+              'isCountDown': isCountdown,
+            });
 
-      setState(() => _isLoading = false);
-      // Navigate to the list page
-      Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              'Task updated successfully!',
+              style: TextStyle(color: Colors.green),
+            ),
+            backgroundColor: Colors.black,
+          ),
+        );
+      } else {
+        //CREATE NEW TASK
+        await FirebaseFirestore.instance.collection('timers').add({
+          'uid': user!.uid,
+          'title': _titleController.text.trim(),
+          'category': _categoryController.text.trim(),
+          'datetime': Timestamp.fromDate(selectedDateTime!),
+          'isCountDown': isCountdown,
+          'isPinned': false,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              'New task created!',
+              style: TextStyle(color: Colors.green),
+            ),
+            backgroundColor: Colors.black,
+          ),
+        );
+      }
+
+      Navigator.pop(context); // go back after saving
     } catch (e) {
-      print("Error adding timer: $e");
-      setState(() => _isLoading = false);
+      print("Error saving timer: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
           content: Text(
-            'Error: Failed to add timer',
+            'Error: Failed to save timer',
             style: const TextStyle(color: Colors.red),
           ),
           backgroundColor: Colors.black,
         ),
       );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -131,15 +189,35 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
             ),
             const SizedBox(height: 15),
 
-            TextFormField(
-              controller: _categoryController,
+            DropdownButtonFormField<String>(
               decoration: InputDecoration(
-                labelText: 'Category/Emoji',
-                labelStyle: const TextStyle(color: Colors.black),
+                labelText: 'Category',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
+              initialValue: _categoryController.text.isEmpty
+                  ? null
+                  : _categoryController.text,
+              items:
+                  [
+                        'Work',
+                        'Study',
+                        'Fitness',
+                        'Shopping',
+                        'Sleep',
+                        'Personal',
+                        'Fun',
+                      ]
+                      .map(
+                        (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
+                      )
+                      .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _categoryController.text = value ?? '';
+                });
+              },
             ),
             const SizedBox(height: 20),
 

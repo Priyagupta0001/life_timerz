@@ -317,6 +317,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  sorting:
+    dependency: "direct main"
+    description:
+      name: sorting
+      sha256: "9c596d60c78958a41244ae2ce63b4127483a7830d64e742e80a9157d10d6dfef"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   source_span:
     dependency: transitive
     description:

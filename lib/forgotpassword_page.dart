@@ -11,13 +11,11 @@ class ForgotpasswordPage extends StatefulWidget {
 class _ForgotpasswordPageState extends State<ForgotpasswordPage> {
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
 
   Future<void> sendResetLink() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isLoading = true;
     });
 
     final email = _emailController.text.trim();
@@ -59,7 +57,6 @@ class _ForgotpasswordPageState extends State<ForgotpasswordPage> {
         ),
       );
     } finally {
-      setState(() => _isLoading = false);
     }
   }
 

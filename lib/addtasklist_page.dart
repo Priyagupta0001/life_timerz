@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -5,48 +6,18 @@ import 'package:flutter/material.dart';
 class AddTaskListPage extends StatefulWidget {
   final bool showPinnedOnly;
 
-  AddTaskListPage({super.key, required this.showPinnedOnly});
+  const AddTaskListPage({super.key, required this.showPinnedOnly});
 
   @override
-  State<StatefulWidget> createState() => _AddTaskListPageState();
+  State<AddTaskListPage> createState() => _AddTaskListPageState();
 }
 
 class _AddTaskListPageState extends State<AddTaskListPage> {
   User? user = FirebaseAuth.instance.currentUser;
-  // delete timer
-  Future<void> _deleteTimer(String id) async {
-    await FirebaseFirestore.instance.collection('timers').doc(id).delete();
-  }
-
-  // remaining time calculate
-  String getRemainingTime(DateTime targetTime) {
-    final now = DateTime.now();
-    final difference = targetTime.difference(now);
-
-    if (difference.isNegative) return "Time's up!";
-
-    final days = difference.inDays;
-    final hours = difference.inHours % 24;
-    final minutes = difference.inMinutes % 60;
-
-    return "$days days, $hours hours, $minutes minutes";
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true,
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 246, 246, 255),
-        automaticallyImplyLeading: false, //backbutton remove
-        title: Text(
-          "Task",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
-
       body: user == null
           ? const Center(child: Text("User not logged in!"))
           : StreamBuilder<QuerySnapshot>(
@@ -56,20 +27,18 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                   .orderBy('datetime', descending: false)
                   .snapshots(),
               builder: (context, snapshot) {
-                //print("Current user UID: ${user!.uid}");
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  //print("Firestore error: ${snapshot.error}");
                   return const Center(
                     child: Text("Something went wrong. Please try again."),
                   );
                 }
 
-                var docs = snapshot.data!.docs; //list k form m extrct data
+                var docs = snapshot.data!.docs;
 
-                // if pinned tasks shown only
+                // Filter pinned tasks if required
                 if (widget.showPinnedOnly) {
                   docs = docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
@@ -82,7 +51,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                     child: Text(
                       widget.showPinnedOnly
                           ? "No pinned tasks yet!"
-                          : "No timers yet! Add one.",
+                          : "No tasks yet! Add one.",
                     ),
                   );
                 }
@@ -99,28 +68,64 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                         ? datetimeRaw.toDate()
                         : DateTime.now();
                     final isPinned = timer['isPinned'] ?? false;
+                    final isCompleted = timer['isCompleted'] ?? false;
 
                     return Dismissible(
                       key: Key(timerDoc.id),
                       background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: EdgeInsets.only(right: 20),
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 20),
                         decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(2),
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(
-                          Icons.delete_outlined,
+                        child: const Icon(
+                          Icons.check_circle_outline,
                           color: Colors.white,
                           size: 28,
                         ),
                       ),
-                      direction: DismissDirection.endToStart,
-                      onDismissed: (_) => _deleteTimer(timerDoc.id),
+                      secondaryBackground: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      direction: DismissDirection.horizontal,
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          // Swipe Right → Mark as Completed
+                          await FirebaseFirestore.instance
+                              .collection('timers')
+                              .doc(timerDoc.id)
+                              .update({'isCompleted': true});
+                          return false;
+                        } else if (direction == DismissDirection.endToStart) {
+                          // Swipe Left → Delete Task
+                          await FirebaseFirestore.instance
+                              .collection('timers')
+                              .doc(timerDoc.id)
+                              .delete();
+                          return true;
+                        }
+                        return false;
+                      },
                       child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 14,
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 0,
+                          vertical: 3,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 10,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -129,10 +134,11 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                             BoxShadow(
                               color: Colors.grey.withOpacity(0.2),
                               blurRadius: 6,
-                              offset: Offset(0, 3),
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
+
                         child: Row(
                           children: [
                             Expanded(
@@ -141,7 +147,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                                 children: [
                                   Text(
                                     "$category - $title",
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 16,
                                       color: Colors.black87,
@@ -150,18 +156,16 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                                   const SizedBox(height: 6),
                                   Row(
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.access_time,
                                         color: Colors.black87,
                                         size: 20,
                                       ),
                                       const SizedBox(width: 8),
-                                      Text(
-                                        getRemainingTime(datetime),
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 12,
-                                        ),
+                                      CountdownText(
+                                        key: ValueKey(timerDoc.id),
+                                        targetTime: datetime,
+                                        isCompleted: isCompleted,
                                       ),
                                     ],
                                   ),
@@ -193,6 +197,80 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                 );
               },
             ),
+    );
+  }
+}
+
+class CountdownText extends StatefulWidget {
+  final DateTime targetTime;
+  final bool isCompleted;
+
+  const CountdownText({
+    super.key,
+    required this.targetTime,
+    this.isCompleted = false,
+  });
+
+  @override
+  State<CountdownText> createState() => _CountdownTextState();
+}
+
+class _CountdownTextState extends State<CountdownText> {
+  Timer? _timer;
+  String _remaining = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _updateRemaining(),
+    );
+  }
+
+  void _updateRemaining() {
+    if (!mounted) return;
+
+    if (widget.isCompleted) {
+      setState(() => _remaining = "Completed!");
+      _timer?.cancel();
+      return;
+    }
+
+    final now = DateTime.now();
+    final diff = widget.targetTime.difference(now);
+
+    if (diff.isNegative) {
+      setState(() => _remaining = "Completed!");
+      _timer?.cancel();
+    } else {
+      final days = diff.inDays;
+      final hours = diff.inHours % 24;
+      final minutes = diff.inMinutes % 60;
+      final seconds = diff.inSeconds % 60;
+      setState(() {
+        _remaining =
+            "$days days, $hours hours, $minutes minutes, $seconds seconds";
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _remaining,
+      style: TextStyle(
+        color: Colors.black,
+        fontSize: 12,
+        fontWeight: widget.isCompleted ? FontWeight.bold : FontWeight.normal,
+      ),
     );
   }
 }
