@@ -165,6 +165,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: _selectedIndex == 1
           ? CustomAppBar(
               title: _titles[_selectedIndex],

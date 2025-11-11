@@ -130,7 +130,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                           vertical: 3,
                         ),
                         padding: const EdgeInsets.symmetric(
-                          vertical: 12,
+                          vertical: 14,
                           horizontal: 10,
                         ),
                         decoration: BoxDecoration(
@@ -208,19 +208,34 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
 
   List<QueryDocumentSnapshot> _applySorting(List<QueryDocumentSnapshot> docs) {
     print("Applying sort: ${widget.selectedSort}");
+
+    List<QueryDocumentSnapshot> activeTasks = [];
+    List<QueryDocumentSnapshot> completedTasks = [];
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final isCompleted = data['isCompleted'] ?? false;
+      if (isCompleted) {
+        completedTasks.add(doc);
+      } else {
+        activeTasks.add(doc);
+      }
+    }
     switch (widget.selectedSort) {
       case 'Newest':
-        docs.sort((a, b) {
+        activeTasks.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
-          final aTime = aData['datetime'] as Timestamp;
-          final bTime = bData['datetime'] as Timestamp;
-          return bTime.compareTo(aTime); // Newest first
+          final aCreated =
+              (aData['createdAt'] ?? aData['datetime']) as Timestamp;
+          final bCreated =
+              (bData['createdAt'] ?? bData['datetime']) as Timestamp;
+          return bCreated.compareTo(aCreated); // Newest first
         });
         break;
 
       case 'Soonest':
-        docs.sort((a, b) {
+        activeTasks.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
           final aTime = aData['datetime'] as Timestamp;
@@ -230,7 +245,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
         break;
 
       case 'Longest':
-        docs.sort((a, b) {
+        activeTasks.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
           final aTime = aData['datetime'] as Timestamp;
@@ -243,7 +258,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
         break;
 
       case 'Category name':
-        docs.sort((a, b) {
+        activeTasks.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
           final aCategory = (aData['category'] ?? '').toString().toLowerCase();
@@ -254,7 +269,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
 
       case 'Title name':
         print("title name");
-        docs.sort((a, b) {
+        activeTasks.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
           final aTitle = (aData['title'] ?? 'No Title')
@@ -267,7 +282,18 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
         });
         break;
     }
-    return docs;
+    completedTasks.sort((a, b) {
+      final aData = a.data() as Map<String, dynamic>;
+      final bData = b.data() as Map<String, dynamic>;
+      final aCompletedAt = aData['completedAt'] ?? aData['datetime'];
+      final bCompletedAt = bData['completedAt'] ?? bData['datetime'];
+
+      if (aCompletedAt is Timestamp && bCompletedAt is Timestamp) {
+        return bCompletedAt.compareTo(aCompletedAt);
+      }
+      return 0;
+    });
+    return [...activeTasks, ...completedTasks];
   }
 }
 

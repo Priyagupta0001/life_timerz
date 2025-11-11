@@ -8,6 +8,7 @@ class CreateNewTimerPage extends StatefulWidget {
   final String? docId;
   final String? existingTitle;
   final DateTime? existingDateTime;
+  final String? existingCategory;
 
   const CreateNewTimerPage({
     super.key,
@@ -15,6 +16,7 @@ class CreateNewTimerPage extends StatefulWidget {
     this.docId,
     this.existingTitle,
     this.existingDateTime,
+    this.existingCategory,
   });
 
   @override
@@ -23,19 +25,18 @@ class CreateNewTimerPage extends StatefulWidget {
 
 class _CreateNewTimePageState extends State<CreateNewTimerPage> {
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _categoryController = TextEditingController();
+  String? _selectedCategory;
   bool _isLoading = false;
   bool isCountdown = false;
 
   DateTime? selectedDateTime;
 
-  final titleController = TextEditingController();
-  DateTime? selectedDate;
   @override
   void initState() {
     super.initState();
     if (widget.isEditing) {
       _titleController.text = widget.existingTitle ?? '';
+      _selectedCategory = widget.existingCategory;
       selectedDateTime = widget.existingDateTime ?? DateTime.now();
     }
   }
@@ -44,7 +45,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
   Future<void> _selectDateTime(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: selectedDateTime ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
@@ -52,7 +53,9 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
     if (pickedDate != null) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
-        initialTime: TimeOfDay.now(),
+        initialTime: selectedDateTime != null
+            ? TimeOfDay.fromDateTime(selectedDateTime!)
+            : TimeOfDay.now(),
       );
       if (pickedTime != null) {
         setState(() {
@@ -86,6 +89,21 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
 
     setState(() => _isLoading = true);
     final user = FirebaseAuth.instance.currentUser;
+    if (user == null && !widget.isEditing) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Please sign in to create a timer',
+            style: TextStyle(color: Colors.red),
+          ),
+          backgroundColor: Colors.black,
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
     try {
       if (widget.isEditing && widget.docId != null) {
         //UPDATE EXISTING TASK
@@ -94,9 +112,10 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
             .doc(widget.docId)
             .update({
               'title': _titleController.text.trim(),
-              'category': _categoryController.text.trim(),
+              'category': _selectedCategory ?? 'Personal',
               'datetime': Timestamp.fromDate(selectedDateTime!),
               'isCountDown': isCountdown,
+              'updatedAt': FieldValue.serverTimestamp(),
             });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -114,8 +133,9 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
         await FirebaseFirestore.instance.collection('timers').add({
           'uid': user!.uid,
           'title': _titleController.text.trim(),
-          'category': _categoryController.text.trim(),
+          'category': _selectedCategory ?? 'Personal',
           'datetime': Timestamp.fromDate(selectedDateTime!),
+          'createdAt': FieldValue.serverTimestamp(),
           'isCountDown': isCountdown,
           'isPinned': false,
         });
@@ -166,7 +186,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "New Timer",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
@@ -196,9 +216,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              initialValue: _categoryController.text.isEmpty
-                  ? null
-                  : _categoryController.text,
+              value: _selectedCategory,
               items:
                   [
                         'Work',
@@ -208,6 +226,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                         'Sleep',
                         'Personal',
                         'Fun',
+                        ''
                       ]
                       .map(
                         (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
@@ -215,7 +234,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                       .toList(),
               onChanged: (value) {
                 setState(() {
-                  _categoryController.text = value ?? '';
+                   _selectedCategory = value;
                 });
               },
             ),
