@@ -20,9 +20,17 @@ class _HomePageState extends State<HomePage> {
   User? user = FirebaseAuth.instance.currentUser;
 
   bool _showPinnedOnly = false;
-
   int _selectedIndex = 0;
   final List<String> _titles = ["Home", "Task", "Profile", "Notification"];
+
+  String _selectedSort = 'Soonest';
+  final List<String> _sortOptions = [
+    'Newest',
+    'Title name',
+    'Category name',
+    'Longest',
+    'Soonest',
+  ];
 
   @override
   void initState() {
@@ -160,10 +168,42 @@ class _HomePageState extends State<HomePage> {
       appBar: _selectedIndex == 1
           ? CustomAppBar(
               title: _titles[_selectedIndex],
+              //sorting dropdown
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.sort, color: Colors.black),
-                  onPressed: () {},
+                Padding(
+                  padding: const EdgeInsets.only(right: 30.0),
+                  child: DropdownButton<String>(
+                    icon: const Icon(Icons.sort, color: Colors.black),
+                    dropdownColor: Colors.white,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    underline: Container(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedSort = newValue!;
+                        print("Sort changed to: $_selectedSort");
+                      });
+                    },
+                    items: _sortOptions.map<DropdownMenuItem<String>>((
+                      String value,
+                    ) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            color: _selectedSort == value
+                                ? Colors.blue[700]
+                                : Colors.black,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    menuMaxHeight: 700,
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
                 ),
               ],
             )
@@ -565,7 +605,10 @@ class _HomePageState extends State<HomePage> {
           : _selectedIndex == 1
           ? Padding(
               padding: const EdgeInsets.all(8.0),
-              child: AddTaskListPage(showPinnedOnly: _showPinnedOnly),
+              child: AddTaskListPage(
+                showPinnedOnly: _showPinnedOnly,
+                selectedSort: _selectedSort,
+              ),
             )
           : _selectedIndex == 2
           ? const ProfilePage()

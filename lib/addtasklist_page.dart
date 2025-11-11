@@ -5,8 +5,13 @@ import 'package:flutter/material.dart';
 
 class AddTaskListPage extends StatefulWidget {
   final bool showPinnedOnly;
+  final String selectedSort;
 
-  const AddTaskListPage({super.key, required this.showPinnedOnly});
+  const AddTaskListPage({
+    super.key,
+    required this.showPinnedOnly,
+    required this.selectedSort,
+  });
 
   @override
   State<AddTaskListPage> createState() => _AddTaskListPageState();
@@ -37,6 +42,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                 }
 
                 var docs = snapshot.data!.docs;
+                docs = _applySorting(docs);
 
                 // Filter pinned tasks if required
                 if (widget.showPinnedOnly) {
@@ -198,6 +204,70 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
               },
             ),
     );
+  }
+
+  List<QueryDocumentSnapshot> _applySorting(List<QueryDocumentSnapshot> docs) {
+    print("Applying sort: ${widget.selectedSort}");
+    switch (widget.selectedSort) {
+      case 'Newest':
+        docs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTime = aData['datetime'] as Timestamp;
+          final bTime = bData['datetime'] as Timestamp;
+          return bTime.compareTo(aTime); // Newest first
+        });
+        break;
+
+      case 'Soonest':
+        docs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTime = aData['datetime'] as Timestamp;
+          final bTime = bData['datetime'] as Timestamp;
+          return aTime.compareTo(bTime); // Soonest first
+        });
+        break;
+
+      case 'Longest':
+        docs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTime = aData['datetime'] as Timestamp;
+          final bTime = bData['datetime'] as Timestamp;
+          final now = DateTime.now();
+          final aDiff = aTime.toDate().difference(now);
+          final bDiff = bTime.toDate().difference(now);
+          return bDiff.compareTo(aDiff); // Longest duration first
+        });
+        break;
+
+      case 'Category name':
+        docs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aCategory = (aData['category'] ?? '').toString().toLowerCase();
+          final bCategory = (bData['category'] ?? '').toString().toLowerCase();
+          return aCategory.compareTo(bCategory);
+        });
+        break;
+
+      case 'Title name':
+        print("title name");
+        docs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTitle = (aData['title'] ?? 'No Title')
+              .toString()
+              .toLowerCase();
+          final bTitle = (bData['title'] ?? 'No Title')
+              .toString()
+              .toLowerCase();
+          return aTitle.compareTo(bTitle);
+        });
+        break;
+    }
+    return docs;
   }
 }
 
