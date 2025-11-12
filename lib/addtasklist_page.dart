@@ -29,7 +29,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
               stream: FirebaseFirestore.instance
                   .collection('timers')
                   .where('uid', isEqualTo: user!.uid)
-                  .orderBy('datetime', descending: false)
+                  //.orderBy('datetime', descending: false)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -111,7 +111,10 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                           await FirebaseFirestore.instance
                               .collection('timers')
                               .doc(timerDoc.id)
-                              .update({'isCompleted': true});
+                              .update({
+                                'isCompleted': true,
+                                'completedAt': FieldValue.serverTimestamp(),
+                              });
                           return false;
                         } else if (direction == DismissDirection.endToStart) {
                           // Swipe Left → Delete Task
@@ -212,87 +215,124 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
     List<QueryDocumentSnapshot> activeTasks = [];
     List<QueryDocumentSnapshot> completedTasks = [];
 
+    bool parseIsCompleted(dynamic raw) {
+      if (raw == null) return false;
+      if (raw is bool) return raw;
+      if (raw is num) return raw != 0;
+      if (raw is String) {
+        final val = raw.toLowerCase().trim();
+        return val == 'true' || val == '1' || val == 'yes';
+      }
+      return false;
+    }
+
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final isCompleted = data['isCompleted'] ?? false;
+      final raw = data['isCompleted'];
+      final isCompleted = parseIsCompleted(raw);
+      print("Doc ${doc.id} => isCompleted=$isCompleted (raw=$raw)");
+
       if (isCompleted) {
         completedTasks.add(doc);
       } else {
         activeTasks.add(doc);
       }
     }
+
     switch (widget.selectedSort) {
       case 'Newest':
         activeTasks.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
-          final aCreated =
-              (aData['createdAt'] ?? aData['datetime']) as Timestamp;
-          final bCreated =
-              (bData['createdAt'] ?? bData['datetime']) as Timestamp;
-          return bCreated.compareTo(aCreated); // Newest first
+          final aTime = (aData['createdAt'] ?? aData['datetime']);
+          final bTime = (bData['createdAt'] ?? bData['datetime']);
+          DateTime getDate(dynamic v) {
+            if (v == null) return DateTime.fromMillisecondsSinceEpoch(0);
+            if (v is Timestamp) return v.toDate();
+            if (v is DateTime) return v;
+            return DateTime.tryParse(v.toString()) ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+          }
+
+          return getDate(bTime).compareTo(getDate(aTime));
         });
         break;
 
       case 'Soonest':
         activeTasks.sort((a, b) {
+          DateTime getDate(dynamic v) {
+            if (v == null) {
+              return DateTime.fromMillisecondsSinceEpoch(9999999999999);
+            }
+            if (v is Timestamp) return v.toDate();
+            if (v is DateTime) return v;
+            return DateTime.tryParse(v.toString()) ??
+                DateTime.fromMillisecondsSinceEpoch(9999999999999);
+          }
+
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
-          final aTime = aData['datetime'] as Timestamp;
-          final bTime = bData['datetime'] as Timestamp;
-          return aTime.compareTo(bTime); // Soonest first
+          return getDate(
+            aData['datetime'],
+          ).compareTo(getDate(bData['datetime']));
         });
         break;
 
-      case 'Longest':
+      case 'Title name':
         activeTasks.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
-          final aTime = aData['datetime'] as Timestamp;
-          final bTime = bData['datetime'] as Timestamp;
-          final now = DateTime.now();
-          final aDiff = aTime.toDate().difference(now);
-          final bDiff = bTime.toDate().difference(now);
-          return bDiff.compareTo(aDiff); // Longest duration first
+          final aTitle = ((a.data() as Map<String, dynamic>)['title'] ?? '')
+              .toString();
+          final bTitle = ((b.data() as Map<String, dynamic>)['title'] ?? '')
+              .toString();
+          return aTitle.toLowerCase().compareTo(bTitle.toLowerCase());
         });
         break;
 
       case 'Category name':
         activeTasks.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
-          final aCategory = (aData['category'] ?? '').toString().toLowerCase();
-          final bCategory = (bData['category'] ?? '').toString().toLowerCase();
-          return aCategory.compareTo(bCategory);
+          final aCategory =
+              ((a.data() as Map<String, dynamic>)['category'] ?? '').toString();
+          final bCategory =
+              ((b.data() as Map<String, dynamic>)['category'] ?? '').toString();
+          return aCategory.toLowerCase().compareTo(bCategory.toLowerCase());
         });
         break;
 
-      case 'Title name':
-        print("title name");
+      case 'Longest':
         activeTasks.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
-          final aTitle = (aData['title'] ?? 'No Title')
-              .toString()
-              .toLowerCase();
-          final bTitle = (bData['title'] ?? 'No Title')
-              .toString()
-              .toLowerCase();
-          return aTitle.compareTo(bTitle);
+          DateTime getDate(dynamic v) {
+            if (v == null) return DateTime.fromMillisecondsSinceEpoch(0);
+            if (v is Timestamp) return v.toDate();
+            if (v is DateTime) return v;
+            return DateTime.tryParse(v.toString()) ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+          }
+
+          final now = DateTime.now();
+          final aTime = getDate((a.data() as Map<String, dynamic>)['datetime']);
+          final bTime = getDate((b.data() as Map<String, dynamic>)['datetime']);
+          return bTime.difference(now).compareTo(aTime.difference(now));
         });
         break;
     }
+
     completedTasks.sort((a, b) {
+      DateTime getDate(dynamic v) {
+        if (v == null) return DateTime.fromMillisecondsSinceEpoch(0);
+        if (v is Timestamp) return v.toDate();
+        if (v is DateTime) return v;
+        return DateTime.tryParse(v.toString()) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+      }
+
       final aData = a.data() as Map<String, dynamic>;
       final bData = b.data() as Map<String, dynamic>;
-      final aCompletedAt = aData['completedAt'] ?? aData['datetime'];
-      final bCompletedAt = bData['completedAt'] ?? bData['datetime'];
-
-      if (aCompletedAt is Timestamp && bCompletedAt is Timestamp) {
-        return bCompletedAt.compareTo(aCompletedAt);
-      }
-      return 0;
+      return getDate(
+        bData['completedAt'] ?? bData['datetime'],
+      ).compareTo(getDate(aData['completedAt'] ?? aData['datetime']));
     });
+
+    print("Active: ${activeTasks.length}, Completed: ${completedTasks.length}");
     return [...activeTasks, ...completedTasks];
   }
 }
@@ -325,31 +365,38 @@ class _CountdownTextState extends State<CountdownText> {
     );
   }
 
-  void _updateRemaining() {
+  void _updateRemaining() async {
     if (!mounted) return;
-
-    if (widget.isCompleted) {
-      setState(() => _remaining = "Completed!");
-      _timer?.cancel();
-      return;
-    }
 
     final now = DateTime.now();
     final diff = widget.targetTime.difference(now);
 
-    if (diff.isNegative) {
+    if (diff.isNegative || widget.isCompleted) {
       setState(() => _remaining = "Completed!");
       _timer?.cancel();
-    } else {
-      final days = diff.inDays;
-      final hours = diff.inHours % 24;
-      final minutes = diff.inMinutes % 60;
-      final seconds = diff.inSeconds % 60;
-      setState(() {
-        _remaining =
-            "$days days, $hours hours, $minutes minutes, $seconds seconds";
-      });
+
+      if (!widget.isCompleted) {
+        final timers = FirebaseFirestore.instance.collection('timers');
+        final docId = (widget.key is ValueKey)
+            ? (widget.key as ValueKey).value
+            : null;
+        if (docId != null) {
+          await timers.doc(docId.toString()).update({
+            'isCompleted': true,
+            'completedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      return;
     }
+    final days = diff.inDays;
+    final hours = diff.inHours % 24;
+    final minutes = diff.inMinutes % 60;
+    final seconds = diff.inSeconds % 60;
+    setState(() {
+      _remaining =
+          "$days days, $hours hours, $minutes minutes, $seconds seconds";
+    });
   }
 
   @override
@@ -363,7 +410,7 @@ class _CountdownTextState extends State<CountdownText> {
     return Text(
       _remaining,
       style: TextStyle(
-        color: Colors.black,
+        color: widget.isCompleted ? Colors.green : Colors.black,
         fontSize: 12,
         fontWeight: widget.isCompleted ? FontWeight.bold : FontWeight.normal,
       ),
