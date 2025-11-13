@@ -15,8 +15,7 @@ class _ForgotpasswordPageState extends State<ForgotpasswordPage> {
   Future<void> sendResetLink() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-    });
+    setState(() {});
 
     final email = _emailController.text.trim();
 
@@ -56,8 +55,7 @@ class _ForgotpasswordPageState extends State<ForgotpasswordPage> {
           backgroundColor: Colors.black,
         ),
       );
-    } finally {
-    }
+    } finally {}
   }
 
   @override
@@ -70,6 +68,10 @@ class _ForgotpasswordPageState extends State<ForgotpasswordPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Color.fromARGB(255, 246, 246, 255),
+        toolbarHeight: 12,
+      ),
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         //logo container

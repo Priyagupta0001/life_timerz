@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:life_timerz/notification_service.dart';
 import 'package:life_timerz/wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await NotificationService.initializeLocalNotification();
   runApp(const MyApp());
 }
 

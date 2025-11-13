@@ -10,6 +10,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     this.actions,
     this.centerTitle = true,
+    required Color backgroundColor,
   });
 
   @override
@@ -18,8 +19,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color.fromARGB(255, 246, 246, 255),
+      backgroundColor: const Color.fromARGB(255, 222, 222, 230),
       automaticallyImplyLeading: false,
+      toolbarHeight: 70,
       elevation: 0,
       centerTitle: centerTitle,
       title: Padding(

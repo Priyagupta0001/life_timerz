@@ -301,6 +301,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
+                              behavior: SnackBarBehavior.floating,
                               content: Text(
                                 'Password reset email sent successfully!',
                                 style: TextStyle(color: Colors.green),

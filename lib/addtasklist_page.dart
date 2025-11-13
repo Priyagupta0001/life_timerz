@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:life_timerz/notification_service.dart';
 
 class AddTaskListPage extends StatefulWidget {
   final bool showPinnedOnly;
@@ -19,10 +20,13 @@ class AddTaskListPage extends StatefulWidget {
 
 class _AddTaskListPageState extends State<AddTaskListPage> {
   User? user = FirebaseAuth.instance.currentUser;
+  final Set<String> _notifiedTaskIds = {};
 
   @override
   Widget build(BuildContext context) {
+    if (user == null) return const Center(child: Text("User not logged in!"));
     return Scaffold(
+      backgroundColor: Colors.white,
       body: user == null
           ? const Center(child: Text("User not logged in!"))
           : StreamBuilder<QuerySnapshot>(
@@ -43,6 +47,75 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
 
                 var docs = snapshot.data!.docs;
                 docs = _applySorting(docs);
+
+                // 🔔 AUTO NOTIFICATION TRIGGERS
+                for (var doc in docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final id = doc.id;
+                  final title = data['title'] ?? 'Untitled Task';
+                  final datetime = (data['datetime'] as Timestamp).toDate();
+                  final isCompleted = data['isCompleted'] ?? false;
+                  final now = DateTime.now();
+                  final diff = datetime.difference(now);
+
+                  // Format time left nicely (e.g. "2 days left", "3 hours left", "30 minutes left")
+                  String timeLeft() {
+                    if (diff.inDays >= 1) {
+                      return "${diff.inDays} day${diff.inDays > 1 ? 's' : ''} left";
+                    } else if (diff.inHours >= 1) {
+                      return "${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} left";
+                    } else if (diff.inMinutes > 0) {
+                      return "${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''} left";
+                    } else {
+                      return "Due now!";
+                    }
+                  }
+
+                  //Task Completed Notification
+                  final isCompletedNotificationSent =
+                      data['isCompletedNotificationSent'] ?? false;
+
+                  if (isCompleted && !isCompletedNotificationSent) {
+                    _notifiedTaskIds.add("$id-completed");
+                    NotificationService.showNotification(
+                      title: "Task Completed!",
+                      body: "Your task '$title' has been completed.",
+                    );
+
+                    FirebaseFirestore.instance
+                        .collection('timers')
+                        .doc(id)
+                        .update({'isCompletedNotificationSent': true});
+                  }
+
+                  //Task 1 hour before due
+                  if (!isCompleted &&
+                      diff.inMinutes <= 60 &&
+                      diff.inMinutes > 0 &&
+                      !_notifiedTaskIds.contains("$id-hourleft")) {
+                    _notifiedTaskIds.add("$id-hourleft");
+                    NotificationService.showNotification(
+                      title: "${timeLeft()}",
+                      body: "Your task '$title' is due in less than 1 hour!",
+                    );
+                  }
+                  // 🕒 General reminder for upcoming tasks
+                  if (!isCompleted &&
+                      diff.inHours <= 24 &&
+                      diff.inHours > 1 &&
+                      !_notifiedTaskIds.contains("$id-dayleft")) {
+                    _notifiedTaskIds.add("$id-dayleft");
+                    NotificationService.showNotification(
+                      title: "⏳ $title - ${timeLeft()}",
+                      body:
+                          "Your task '$title' is due in ${timeLeft()}. Keep going!",
+                    );
+                    FirebaseFirestore.instance
+                        .collection('timers')
+                        .doc(id)
+                        .update({'isHourBeforeNotificationSent': true});
+                  }
+                }
 
                 // Filter pinned tasks if required
                 if (widget.showPinnedOnly) {
@@ -108,13 +181,24 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                       confirmDismiss: (direction) async {
                         if (direction == DismissDirection.startToEnd) {
                           // Swipe Right → Mark as Completed
+                          NotificationService.showNotification(
+                            title: "Task Completed!",
+                            body:
+                                "Your task '${timer['title']}' has been completed.",
+                          );
+
                           await FirebaseFirestore.instance
                               .collection('timers')
                               .doc(timerDoc.id)
                               .update({
                                 'isCompleted': true,
                                 'completedAt': FieldValue.serverTimestamp(),
+                                'isCompletedNotificationSent': true,
                               });
+                          //Stop the timer locally (UI update)
+                          setState(() {
+                            timer['isCompleted'] = true;
+                          });
                           return false;
                         } else if (direction == DismissDirection.endToStart) {
                           // Swipe Left → Delete Task
@@ -358,6 +442,12 @@ class _CountdownTextState extends State<CountdownText> {
   @override
   void initState() {
     super.initState();
+    NotificationService.scheduleDailyReminder(
+      title: "Daily Reminder 🕘",
+      body: "You have tasks scheduled today. Let's get started!",
+      hour: 9,
+      minute: 0,
+    );
     _updateRemaining();
     _timer = Timer.periodic(
       const Duration(seconds: 1),
@@ -368,10 +458,17 @@ class _CountdownTextState extends State<CountdownText> {
   void _updateRemaining() async {
     if (!mounted) return;
 
+    // If manually completed, stop timer instantly
+    if (widget.isCompleted) {
+      setState(() => _remaining = "Completed!");
+      _timer?.cancel();
+      return;
+    }
+
     final now = DateTime.now();
     final diff = widget.targetTime.difference(now);
 
-    if (diff.isNegative || widget.isCompleted) {
+    if (diff.isNegative) {
       setState(() => _remaining = "Completed!");
       _timer?.cancel();
 

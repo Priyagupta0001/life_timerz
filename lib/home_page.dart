@@ -8,6 +8,7 @@ import 'package:life_timerz/customappbar.dart';
 import 'package:life_timerz/custombottomnavbar.dart';
 import 'package:life_timerz/notification_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:life_timerz/notification_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -35,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    NotificationService.initializeNotification();
     FirebaseAuth.instance.authStateChanges().listen((currentUser) {
       setState(() {
         user = currentUser;
@@ -207,8 +209,12 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ],
+              backgroundColor: const Color.fromARGB(255, 243, 231, 230),
             )
-          : CustomAppBar(title: _titles[_selectedIndex]),
+          : CustomAppBar(
+              title: _titles[_selectedIndex],
+              backgroundColor: const Color.fromARGB(255, 252, 237, 236),
+            ),
 
       body: _selectedIndex == 0
           ? (user == null
@@ -257,9 +263,9 @@ class _HomePageState extends State<HomePage> {
                                       decoration: BoxDecoration(
                                         color: const Color.fromARGB(
                                           255,
-                                          255,
-                                          230,
-                                          253,
+                                          226,
+                                          188,
+                                          223,
                                         ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -512,86 +518,145 @@ class _HomePageState extends State<HomePage> {
                                         final isCompleted =
                                             task['isCompleted'] ?? false;
 
-                                        return GestureDetector(
-                                          onTap: () => _showEditAlert(
-                                            docs[index].id,
-                                            task,
-                                          ),
-                                          child: Container(
-                                            margin: const EdgeInsets.only(
-                                              bottom: 14,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                              horizontal: 3,
+                                        return Dismissible(
+                                          key: ValueKey(docs[index].id),
+                                          background: Container(
+                                            alignment: Alignment.centerLeft,
+                                            padding: const EdgeInsets.only(
+                                              left: 20,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: Colors.white,
+                                              color: Colors.green,
                                               borderRadius:
-                                                  BorderRadius.circular(12),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.grey
-                                                      .withOpacity(0.1),
-                                                  blurRadius: 6,
-                                                  offset: Offset(0, 3),
-                                                ),
-                                              ],
+                                                  BorderRadius.circular(8),
                                             ),
-                                            child: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        "${task['category']} - ${task['title']}",
-                                                        style: TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          fontSize: 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 6),
-                                                      Row(
-                                                        children: [
-                                                          const Icon(
-                                                            Icons.access_time,
+                                            child: const Icon(
+                                              Icons.check,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          secondaryBackground: Container(
+                                            alignment: Alignment.centerRight,
+                                            padding: const EdgeInsets.only(
+                                              right: 20,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.delete,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          confirmDismiss: (direction) async {
+                                            if (direction ==
+                                                DismissDirection.startToEnd) {
+                                              // Mark completed
+                                              await FirebaseFirestore.instance
+                                                  .collection('timers')
+                                                  .doc(docs[index].id)
+                                                  .update({
+                                                    'isCompleted': true,
+                                                  });
+                                              return false; // don't remove from list immediately
+                                            } else if (direction ==
+                                                DismissDirection.endToStart) {
+                                              // Delete task
+                                              await FirebaseFirestore.instance
+                                                  .collection('timers')
+                                                  .doc(docs[index].id)
+                                                  .delete();
+                                              return true; // remove from list
+                                            }
+                                            return false;
+                                          },
+                                          child: GestureDetector(
+                                            onTap: () => _showEditAlert(
+                                              docs[index].id,
+                                              task,
+                                            ),
+                                            child: Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 14,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 12,
+                                                    horizontal: 3,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.grey
+                                                        .withOpacity(0.1),
+                                                    blurRadius: 6,
+                                                    offset: Offset(0, 3),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          "${task['category']} - ${task['title']}",
+                                                          style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            fontSize: 16,
                                                             color:
                                                                 Colors.black87,
-                                                            size: 20,
                                                           ),
-                                                          const SizedBox(
-                                                            width: 8,
-                                                          ),
-                                                          CountdownText(
-                                                            key: ValueKey(
-                                                              docs[index].id,
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 6,
+                                                        ),
+                                                        Row(
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.access_time,
+                                                              color: Colors
+                                                                  .black87,
+                                                              size: 20,
                                                             ),
-                                                            targetTime:
-                                                                datetime,
-                                                            isCompleted:
-                                                                isCompleted,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
+                                                            const SizedBox(
+                                                              width: 8,
+                                                            ),
+                                                            CountdownText(
+                                                              key: ValueKey(
+                                                                docs[index].id,
+                                                              ),
+                                                              targetTime:
+                                                                  datetime,
+                                                              isCompleted:
+                                                                  isCompleted,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
-                                                ),
-                                                Icon(
-                                                  Icons.push_pin,
-                                                  color: const Color.fromARGB(
-                                                    255,
-                                                    32,
-                                                    82,
-                                                    233,
+                                                  Icon(
+                                                    Icons.push_pin,
+                                                    color: const Color.fromARGB(
+                                                      255,
+                                                      32,
+                                                      82,
+                                                      233,
+                                                    ),
+                                                    size: 22,
                                                   ),
-                                                  size: 22,
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         );
@@ -613,7 +678,7 @@ class _HomePageState extends State<HomePage> {
             )
           : _selectedIndex == 2
           ? const ProfilePage()
-          : const NotificationPage(),
+          : NotificationPage(),
 
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -709,7 +774,7 @@ class _CountdownTextState extends State<CountdownText> {
     return Text(
       _remaining,
       style: TextStyle(
-        color: Colors.black,
+        color: widget.isCompleted ? Colors.green : Colors.black,
         fontSize: 12,
         fontWeight: widget.isCompleted ? FontWeight.bold : FontWeight.normal,
       ),

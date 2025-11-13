@@ -180,7 +180,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 246, 246, 255),
+        backgroundColor: const Color.fromARGB(255, 222, 222, 230),
         //automaticallyImplyLeading: true, //backbutton
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
@@ -226,7 +226,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                         'Sleep',
                         'Personal',
                         'Fun',
-                        ''
+                        '',
                       ]
                       .map(
                         (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
@@ -234,7 +234,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                       .toList(),
               onChanged: (value) {
                 setState(() {
-                   _selectedCategory = value;
+                  _selectedCategory = value;
                 });
               },
             ),

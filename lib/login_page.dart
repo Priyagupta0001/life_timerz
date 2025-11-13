@@ -67,7 +67,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 50),
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 25),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           content: Text(message, style: const TextStyle(color: Colors.red)),
           backgroundColor: Colors.black,
