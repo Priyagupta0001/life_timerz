@@ -180,29 +180,19 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                       direction: DismissDirection.horizontal,
                       confirmDismiss: (direction) async {
                         if (direction == DismissDirection.startToEnd) {
-                          // Swipe Right → Mark as Completed
-                          NotificationService.showNotification(
-                            title: "Task Completed!",
-                            body:
-                                "Your task '${timer['title']}' has been completed.",
-                          );
-
-                          await FirebaseFirestore.instance
-                              .collection('timers')
-                              .doc(timerDoc.id)
-                              .update({
-                                'isCompleted': true,
-                                'completedAt': FieldValue.serverTimestamp(),
-                                'isCompletedNotificationSent': true,
-                              });
-                          //Stop the timer locally (UI update)
                           setState(() {
                             timer['isCompleted'] = true;
                           });
+                          FirebaseFirestore.instance
+                              .collection('timers')
+                              .doc(timerDoc.id)
+                              .update({'isCompleted': true});
                           return false;
                         } else if (direction == DismissDirection.endToStart) {
-                          // Swipe Left → Delete Task
-                          await FirebaseFirestore.instance
+                          setState(() {
+                            docs.removeAt(index);
+                          });
+                          FirebaseFirestore.instance
                               .collection('timers')
                               .doc(timerDoc.id)
                               .delete();
@@ -210,6 +200,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
                         }
                         return false;
                       },
+
                       child: Container(
                         width: double.infinity,
                         margin: const EdgeInsets.symmetric(

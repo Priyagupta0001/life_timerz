@@ -6,7 +6,7 @@ import 'package:life_timerz/wrapper.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await NotificationService.initializeLocalNotification();
+  await NotificationService.initialize();
   runApp(const MyApp());
 }
 
