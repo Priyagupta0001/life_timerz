@@ -127,9 +127,11 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Color.fromARGB(255, 246, 246, 255),
-        toolbarHeight: 18,
+        toolbarHeight: 12,
       ),
       resizeToAvoidBottomInset: true,
       body: SafeArea(

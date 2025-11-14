@@ -248,19 +248,19 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   SizedBox(height: 10),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 0),
-                    horizontalTitleGap: 13,
-                    minVerticalPadding: 0,
-                    dense: true,
-                    leading: Icon(Icons.subscriptions_outlined),
-                    title: Text('Subscription', style: TextStyle(fontSize: 14)),
-                    trailing: Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: Colors.black,
-                    ),
-                  ),
+                  // ListTile(
+                  //   contentPadding: const EdgeInsets.symmetric(horizontal: 0),
+                  //   horizontalTitleGap: 13,
+                  //   minVerticalPadding: 0,
+                  //   dense: true,
+                  //   leading: Icon(Icons.subscriptions_outlined),
+                  //   title: Text('Subscription', style: TextStyle(fontSize: 14)),
+                  //   trailing: Icon(
+                  //     Icons.arrow_forward_ios,
+                  //     size: 16,
+                  //     color: Colors.black,
+                  //   ),
+                  // ),
                   Divider(height: 1, color: Colors.grey[300]),
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 0),

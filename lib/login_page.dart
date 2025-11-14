@@ -40,7 +40,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 50),
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 25),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           content: const Text(
             "Login Successful!",
@@ -98,9 +98,10 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 25),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          content: const Text('Google sign-in successful!'),
+          content: const Text('Google sign-in successful!', style: TextStyle(color: Colors.green,)),
+          backgroundColor: Colors.black,
         ),
       );
     } catch (e) {
@@ -108,7 +109,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 50),
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 25),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           content: Text('Google sign-in failed: $e'),
         ),
@@ -175,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                           color: Colors.black,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(height: 6),
                       Text(
                         'Enter the below details',
                         style: TextStyle(

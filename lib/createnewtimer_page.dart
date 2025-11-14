@@ -226,7 +226,8 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                         'Sleep',
                         'Personal',
                         'Fun',
-                        '',
+                        'Art',
+                        'BusinessWork',
                       ]
                       .map(
                         (cat) => DropdownMenuItem(value: cat, child: Text(cat)),

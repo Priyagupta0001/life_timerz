@@ -174,9 +174,9 @@ class _HomePageState extends State<HomePage> {
               //sorting dropdown
               actions: [
                 Padding(
-                  padding: const EdgeInsets.only(right: 30.0),
+                  padding: const EdgeInsets.only(right: 15.0),
                   child: DropdownButton<String>(
-                    icon: const Icon(Icons.sort, color: Colors.black),
+                    icon: const Icon(Icons.sort_outlined, size: 30, color: Colors.black),
                     dropdownColor: Colors.white,
                     style: const TextStyle(
                       color: Colors.black,

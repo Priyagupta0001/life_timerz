@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -189,9 +190,13 @@ class NotificationService {
     int id,
   ) async {
     final prefs = await SharedPreferences.getInstance();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final key = "notifications_${user.uid}";
     final now = DateTime.now();
 
-    final existing = prefs.getStringList('notifications') ?? [];
+    final existing = prefs.getStringList(key) ?? [];
     print("💾 Saving notification: $title - $body - id=$id");
 
     // Remove old notifications >2 days
@@ -221,13 +226,16 @@ class NotificationService {
         "time": now.toIso8601String(),
       }),
     );
-    await prefs.setStringList('notifications', fresh);
+    await prefs.setStringList(key, fresh);
   }
 
   /// Fetch saved notifications
   static Future<List<Map<String, dynamic>>> getAllNotifications() async {
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getStringList('notifications') ?? [];
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+
+    final stored = prefs.getStringList("notifications_${user.uid}") ?? [];
     print("📬 Loaded notifications: ${stored.length}");
 
     return stored.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
@@ -236,7 +244,10 @@ class NotificationService {
   /// Clear all saved notifications
   static Future<void> clearNotifications() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('notifications');
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await prefs.remove("notifications_${user.uid}");
+    }
   }
 
   /// Remove old notifications >2 days
