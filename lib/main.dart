@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:life_timerz/notification_service.dart';
 import 'package:life_timerz/wrapper.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
   await Firebase.initializeApp();
   await NotificationService.initialize();
+
+  // Delay splash manually
+  await Future.delayed(const Duration(seconds: 3));
+
+  FlutterNativeSplash.remove(); // VERY IMPORTANT
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: Wrapper());
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Wrapper(),
+    );
   }
 }
