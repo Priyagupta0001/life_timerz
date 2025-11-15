@@ -100,7 +100,10 @@ class _LoginPageState extends State<LoginPage> {
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.only(left: 16, right: 16, bottom: 25),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          content: const Text('Google sign-in successful!', style: TextStyle(color: Colors.green,)),
+          content: const Text(
+            'Google sign-in successful!',
+            style: TextStyle(color: Colors.green),
+          ),
           backgroundColor: Colors.black,
         ),
       );
@@ -154,6 +157,7 @@ class _LoginPageState extends State<LoginPage> {
                     image: DecorationImage(
                       image: AssetImage('assets/logo_img.png'),
                       fit: BoxFit.contain,
+                      scale: 0.5,
                       alignment: Alignment.centerLeft,
                     ),
                   ),

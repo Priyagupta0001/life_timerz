@@ -95,6 +95,7 @@ class _SignUpPageState extends State<SignUpPage> {
         SnackBar(
           content: Text(message, style: const TextStyle(color: Colors.red)),
           backgroundColor: Colors.black,
+          
         ),
       );
     } catch (e) {
