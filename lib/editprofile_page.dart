@@ -124,7 +124,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error updating info: $e')));
+        ).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Error updating info: $e')));
       }
     }
   }
