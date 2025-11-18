@@ -6,7 +6,7 @@ import 'package:life_timerz/notification_service.dart';
 
 class AddTaskListPage extends StatefulWidget {
   final bool showPinnedOnly;
-  final String selectedSort;
+  final ValueNotifier<String> selectedSort;
 
   const AddTaskListPage({
     super.key,
@@ -22,50 +22,8 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
   final User? user = FirebaseAuth.instance.currentUser;
   final Set<String> _notifiedTaskIds = {};
 
-  // Local notifier that holds the tasks we render (keeps immediate UI updates)
   final ValueNotifier<List<_LocalTask>> _taskListNotifier =
       ValueNotifier<List<_LocalTask>>([]);
-
-  // Optional: keep stream subscription reference if you want to cancel later
-  StreamSubscription<QuerySnapshot>? _snapshotSub;
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (user != null) {
-      _snapshotSub = FirebaseFirestore.instance
-          .collection('timers')
-          .where('uid', isEqualTo: user!.uid)
-          .snapshots()
-          .listen((snapshot) {
-            // Convert to local tasks
-            List<_LocalTask> incoming = snapshot.docs
-                .map(
-                  (doc) => _LocalTask(
-                    id: doc.id,
-                    data: Map<String, dynamic>.from(
-                      doc.data() as Map<String, dynamic>,
-                    ),
-                    ref: doc.reference,
-                  ),
-                )
-                .toList();
-
-            // Apply sorting/filtering exactly as before (but on _LocalTask list)
-            incoming = _applySortingAndFilter(incoming);
-
-            _taskListNotifier.value = incoming;
-          });
-    }
-  }
-
-  @override
-  void dispose() {
-    _snapshotSub?.cancel();
-    _taskListNotifier.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,160 +31,187 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: ValueListenableBuilder<List<_LocalTask>>(
-        valueListenable: _taskListNotifier,
-        builder: (context, tasks, _) {
-          // If notifier is empty it may mean no data yet or no tasks
-          if (tasks.isEmpty) {
-            return Center(
-              child: Text(
-                widget.showPinnedOnly
-                    ? "No pinned tasks yet!"
-                    : "No tasks yet! Add one.",
-              ),
-            );
+
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('timers')
+            .where('uid', isEqualTo: user!.uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          // Before building list, run notification triggers on current local tasks
-          _runNotificationTriggers(tasks);
+          List<_LocalTask> tasks = snapshot.data!.docs.map((doc) {
+            return _LocalTask(
+              id: doc.id,
+              data: Map<String, dynamic>.from(
+                doc.data() as Map<String, dynamic>,
+              ),
+              ref: doc.reference,
+            );
+          }).toList();
 
-          return ListView.builder(
-            itemCount: tasks.length,
-            itemBuilder: (context, index) {
-              final t = tasks[index];
-              final timer = t.data;
-              final title = timer['title'] ?? '';
-              final category = timer['category'] ?? '';
-              final datetimeRaw = timer['datetime'];
-              final datetime = (datetimeRaw is Timestamp)
-                  ? datetimeRaw.toDate()
-                  : (datetimeRaw is DateTime ? datetimeRaw : DateTime.now());
-              final isPinned = timer['isPinned'] ?? false;
-              final isCompleted = timer['isCompleted'] ?? false;
+          /// apply same sorting/filter
+          return ValueListenableBuilder<String>(
+            valueListenable: widget.selectedSort,
+            builder: (_, sortValue, __) {
+              tasks = _applySortingAndFilter(tasks, sortValue);
+              _taskListNotifier.value = tasks;
+              _runNotificationTriggers(tasks);
 
-              return Dismissible(
-                key: Key(t.id),
-                background: Container(
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(left: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(8),
+              if (tasks.isEmpty) {
+                return Center(
+                  child: Text(
+                    widget.showPinnedOnly
+                        ? "No pinned tasks yet!"
+                        : "No tasks yet! Add one.",
                   ),
-                  child: const Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                secondaryBackground: Container(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                direction: DismissDirection.horizontal,
-                confirmDismiss: (direction) async {
-                  if (direction == DismissDirection.startToEnd) {
-                    // COMPLETE: optimistic local update + update Firestore
-                    _markTaskCompletedLocally(t.id);
-                    await t.ref.update({
-                      'isCompleted': true,
-                      'completedAt': FieldValue.serverTimestamp(),
-                    });
-                    return false; // don't dismiss visually (we only mark completed)
-                  } else if (direction == DismissDirection.endToStart) {
-                    // DELETE: optimistic local removal + delete in Firestore
-                    _removeTaskLocallyAt(index);
-                    await t.ref.delete();
-                    return true; // allow dismiss animation
-                  }
-                  return false;
-                },
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 0,
-                    vertical: 3,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "$category - $title",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.access_time,
-                                  color: Colors.black87,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                CountdownText(
-                                  key: ValueKey(t.id),
-                                  targetTime: datetime,
-                                  isCompleted: isCompleted,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                          color: isPinned
-                              ? const Color.fromARGB(255, 32, 82, 233)
-                              : Colors.grey,
-                          size: 22,
-                        ),
-                        onPressed: () async {
-                          // Toggle pin locally and in Firestore
-                          _togglePinLocally(t.id);
-                          await t.ref.update({
-                            'isPinned': !(t.data['isPinned'] ?? false),
-                          });
+                );
+              }
+
+              // Before building list, run notification triggers on current local tasks
+              _runNotificationTriggers(tasks);
+
+              return ValueListenableBuilder<List<_LocalTask>>(
+                valueListenable: _taskListNotifier,
+                builder: (_, taskList, __) {
+                  return ListView.builder(
+                    itemCount: taskList.length,
+                    itemBuilder: (_, index) {
+                      final t = taskList[index];
+                      final timer = t.data;
+                      final title = timer['title'] ?? '';
+                      final category = timer['category'] ?? '';
+                      final datetimeRaw = timer['datetime'];
+                      final datetime = (datetimeRaw is Timestamp)
+                          ? datetimeRaw.toDate()
+                          : (datetimeRaw is DateTime
+                                ? datetimeRaw
+                                : DateTime.now());
+                      final isPinned = timer['isPinned'] ?? false;
+                      final isCompleted = timer['isCompleted'] ?? false;
+
+                      return Dismissible(
+                        key: Key(t.id),
+                        background: _swipeLeftBackground(),
+                        secondaryBackground: _swipeRightBackground(),
+                        direction: DismissDirection.horizontal,
+                        confirmDismiss: (direction) async {
+                          if (direction == DismissDirection.startToEnd) {
+                            _markTaskCompletedLocally(t.id);
+                            await t.ref.update({
+                              'isCompleted': true,
+                              'completedAt': FieldValue.serverTimestamp(),
+                            });
+                            return false; // keep item
+                          } else if (direction == DismissDirection.endToStart) {
+                            _removeTaskLocallyAt(index);
+                            await t.ref.delete();
+                            return true; // dismiss UI
+                          }
+                          return false;
                         },
-                      ),
-                    ],
-                  ),
-                ),
+                        child: _buildTaskTile(
+                          t,
+                          title,
+                          category,
+                          datetime,
+                          isPinned,
+                          isCompleted,
+                        ),
+                      );
+                    },
+                  );
+                },
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _swipeLeftBackground() => Container(
+    alignment: Alignment.centerLeft,
+    padding: const EdgeInsets.only(left: 20),
+    color: Colors.green,
+    child: const Icon(
+      Icons.check_circle_outline,
+      color: Colors.white,
+      size: 28,
+    ),
+  );
+
+  Widget _swipeRightBackground() => Container(
+    alignment: Alignment.centerRight,
+    padding: const EdgeInsets.only(right: 20),
+    color: Colors.red,
+    child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+  );
+
+  Widget _buildTaskTile(
+    _LocalTask t,
+    String title,
+    String category,
+    DateTime datetime,
+    bool isPinned,
+    bool isCompleted,
+  ) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 6),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "$category - $title",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time,
+                      color: Colors.black87,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    CountdownText(
+                      key: ValueKey(t.id),
+                      targetTime: datetime,
+                      isCompleted: isCompleted,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+              color: isPinned ? Colors.blue : Colors.grey,
+            ),
+            onPressed: () async {
+              _togglePinLocally(t.id);
+              await t.ref.update({'isPinned': !(t.data['isPinned'] ?? false)});
+            },
+          ),
+        ],
       ),
     );
   }
@@ -239,12 +224,13 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
       final id = t.id;
       final title = data['title'] ?? 'Untitled Task';
       final datetimeDynamic = data['datetime'];
+
       DateTime datetime;
-      if (datetimeDynamic is Timestamp)
+      if (datetimeDynamic is Timestamp) {
         datetime = datetimeDynamic.toDate();
-      else if (datetimeDynamic is DateTime)
+      } else if (datetimeDynamic is DateTime) {
         datetime = datetimeDynamic;
-      else {
+      } else {
         // If malformed, skip
         continue;
       }
@@ -305,12 +291,8 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
     }
   }
 
-  // Replace the entire local list (used by stream)
-  void _replaceAllLocalTasks(List<_LocalTask> newList) {
-    _taskListNotifier.value = newList;
-  }
-
-  // Mark a task completed in local notifier (without setState)
+  // LOCAL UI UPDATES (using ValueNotifier)
+  // Mark a task complted globally(UI and firebase) both
   void _markTaskCompletedLocally(String id) {
     final current = List<_LocalTask>.from(_taskListNotifier.value);
     final idx = current.indexWhere((e) => e.id == id);
@@ -323,7 +305,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
     }
   }
 
-  // Remove a task at given index locally
+  // remove /delete tasks globally(UI and firebase) both
   void _removeTaskLocallyAt(int index) {
     final current = List<_LocalTask>.from(_taskListNotifier.value);
     if (index >= 0 && index < current.length) {
@@ -332,7 +314,7 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
     }
   }
 
-  // Toggle pin locally
+  // Toggle pin/unpin globally
   void _togglePinLocally(String id) {
     final current = List<_LocalTask>.from(_taskListNotifier.value);
     final idx = current.indexWhere((e) => e.id == id);
@@ -344,123 +326,96 @@ class _AddTaskListPageState extends State<AddTaskListPage> {
     }
   }
 
-  @override
-  void didUpdateWidget(covariant AddTaskListPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.selectedSort != widget.selectedSort ||
-        oldWidget.showPinnedOnly != widget.showPinnedOnly) {
-      final sorted = _applySortingAndFilter(_taskListNotifier.value);
-      _taskListNotifier.value = sorted;
-    }
-  }
-
   // Sorting & Filtering (adapted to _LocalTask)
-  List<_LocalTask> _applySortingAndFilter(List<_LocalTask> docs) {
-    // Apply initial parsing and separation into active/completed
-    List<_LocalTask> activeTasks = [];
-    List<_LocalTask> completedTasks = [];
+  List<_LocalTask> _applySortingAndFilter(
+    List<_LocalTask> docs,
+    String sortValue,
+  ) {
+    // Separate active & completed
+    List<_LocalTask> activeTasks = docs
+        .where((e) => _parseBool(e.data['isCompleted']) == false)
+        .toList();
+    List<_LocalTask> completedTasks = docs
+        .where((e) => _parseBool(e.data['isCompleted']) == true)
+        .toList();
 
-    bool parseIsCompleted(dynamic raw) {
-      if (raw == null) return false;
-      if (raw is bool) return raw;
-      if (raw is num) return raw != 0;
-      if (raw is String) {
-        final val = raw.toLowerCase().trim();
-        return val == 'true' || val == '1' || val == 'yes';
-      }
-      return false;
-    }
-
-    for (var doc in docs) {
-      final data = doc.data;
-      final raw = data['isCompleted'];
-      final isCompleted = parseIsCompleted(raw);
-      if (isCompleted) {
-        completedTasks.add(doc);
-      } else {
-        activeTasks.add(doc);
-      }
-    }
-
-    DateTime _getDate(dynamic v, {bool farFutureIfNull = false}) {
-      if (v == null) {
-        return farFutureIfNull
-            ? DateTime.fromMillisecondsSinceEpoch(9999999999999)
-            : DateTime.fromMillisecondsSinceEpoch(0);
-      }
-      if (v is Timestamp) return v.toDate();
-      if (v is DateTime) return v;
-      return DateTime.tryParse(v.toString()) ??
-          (farFutureIfNull
-              ? DateTime.fromMillisecondsSinceEpoch(9999999999999)
-              : DateTime.fromMillisecondsSinceEpoch(0));
-    }
-
-    switch (widget.selectedSort) {
+    // Sorting active tasks
+    switch (widget.selectedSort.value) {
       case 'Newest':
-        activeTasks.sort((a, b) {
-          final aData = a.data;
-          final bData = b.data;
-          final aTime = aData['createdAt'] ?? aData['datetime'];
-          final bTime = bData['createdAt'] ?? bData['datetime'];
-          return _getDate(bTime).compareTo(_getDate(aTime));
-        });
+        activeTasks.sort(
+          (a, b) => _getDate(
+            b.data['createdAt'] ?? b.data['datetime'],
+          ).compareTo(_getDate(a.data['createdAt'] ?? a.data['datetime'])),
+        );
         break;
 
       case 'Soonest':
-        activeTasks.sort((a, b) {
-          final aData = a.data;
-          final bData = b.data;
-          return _getDate(
-            aData['datetime'],
-            farFutureIfNull: true,
-          ).compareTo(_getDate(bData['datetime'], farFutureIfNull: true));
-        });
+        activeTasks.sort(
+          (a, b) => _getDate(
+            a.data['datetime'],
+            fallback: true,
+          ).compareTo(_getDate(b.data['datetime'], fallback: true)),
+        );
         break;
 
       case 'Title name':
-        activeTasks.sort((a, b) {
-          final aTitle = (a.data['title'] ?? '').toString();
-          final bTitle = (b.data['title'] ?? '').toString();
-          return aTitle.toLowerCase().compareTo(bTitle.toLowerCase());
-        });
+        activeTasks.sort(
+          (a, b) => (a.data['title'] ?? '').toString().toLowerCase().compareTo(
+            (b.data['title'] ?? '').toString().toLowerCase(),
+          ),
+        );
         break;
 
       case 'Category name':
-        activeTasks.sort((a, b) {
-          final aCat = (a.data['category'] ?? '').toString();
-          final bCat = (b.data['category'] ?? '').toString();
-          return aCat.toLowerCase().compareTo(bCat.toLowerCase());
-        });
+        activeTasks.sort(
+          (a, b) => (a.data['category'] ?? '')
+              .toString()
+              .toLowerCase()
+              .compareTo((b.data['category'] ?? '').toString().toLowerCase()),
+        );
         break;
 
       case 'Longest':
-        activeTasks.sort((a, b) {
-          final now = DateTime.now();
-          final aTime = _getDate(a.data['datetime']);
-          final bTime = _getDate(b.data['datetime']);
-          return bTime.difference(now).compareTo(aTime.difference(now));
-        });
-        break;
-
-      default:
+        final now = DateTime.now();
+        activeTasks.sort(
+          (a, b) => _getDate(b.data['datetime'])
+              .difference(now)
+              .compareTo(_getDate(a.data['datetime']).difference(now)),
+        );
         break;
     }
 
-    completedTasks.sort((a, b) {
-      final aDate = a.data['completedAt'] ?? a.data['datetime'];
-      final bDate = b.data['completedAt'] ?? b.data['datetime'];
-      return _getDate(bDate).compareTo(_getDate(aDate));
-    });
+    // Sort completed tasks (latest completed first)
+    completedTasks.sort(
+      (a, b) => _getDate(
+        b.data['completedAt'] ?? b.data['datetime'],
+      ).compareTo(_getDate(a.data['completedAt'] ?? a.data['datetime'])),
+    );
 
-    // Apply pinned filter if needed
     List<_LocalTask> merged = [...activeTasks, ...completedTasks];
+
     if (widget.showPinnedOnly) {
-      merged = merged.where((doc) => doc.data['isPinned'] == true).toList();
+      merged = merged.where((e) => e.data['isPinned'] == true).toList();
     }
 
     return merged;
+  }
+
+  // Helpers
+  bool _parseBool(dynamic v) => v == true || v == 'true' || v == 1 || v == '1';
+
+  DateTime _getDate(dynamic v, {bool fallback = false}) {
+    if (v == null) {
+      return fallback
+          ? DateTime.fromMillisecondsSinceEpoch(9999999999999)
+          : DateTime.fromMillisecondsSinceEpoch(0);
+    }
+    if (v is Timestamp) return v.toDate();
+    if (v is DateTime) return v;
+    return DateTime.tryParse(v.toString()) ??
+        (fallback
+            ? DateTime.fromMillisecondsSinceEpoch(9999999999999)
+            : DateTime.fromMillisecondsSinceEpoch(0));
   }
 }
 

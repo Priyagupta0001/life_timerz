@@ -25,19 +25,21 @@ class CreateNewTimerPage extends StatefulWidget {
 
 class _CreateNewTimePageState extends State<CreateNewTimerPage> {
   final TextEditingController _titleController = TextEditingController();
-  String? _selectedCategory;
-  bool _isLoading = false;
-  bool isCountdown = false;
 
-  DateTime? selectedDateTime;
+  final ValueNotifier<bool> _isLoading = ValueNotifier(false);
+  final ValueNotifier<bool> isCountdown = ValueNotifier(false);
+  final ValueNotifier<DateTime?> selectedDateTime = ValueNotifier(null);
+  final ValueNotifier<String?> selectedCategory = ValueNotifier(null);
 
   @override
   void initState() {
     super.initState();
+
+    // If editing, pre-fill fields
     if (widget.isEditing) {
       _titleController.text = widget.existingTitle ?? '';
-      _selectedCategory = widget.existingCategory;
-      selectedDateTime = widget.existingDateTime ?? DateTime.now();
+      selectedCategory.value = widget.existingCategory;
+      selectedDateTime.value = widget.existingDateTime ?? DateTime.now();
     }
   }
 
@@ -45,7 +47,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
   Future<void> _selectDateTime(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: selectedDateTime ?? DateTime.now(),
+      initialDate: selectedDateTime.value ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
@@ -53,27 +55,25 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
     if (pickedDate != null) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
-        initialTime: selectedDateTime != null
-            ? TimeOfDay.fromDateTime(selectedDateTime!)
+        initialTime: selectedDateTime.value != null
+            ? TimeOfDay.fromDateTime(selectedDateTime.value!)
             : TimeOfDay.now(),
       );
       if (pickedTime != null) {
-        setState(() {
-          selectedDateTime = DateTime(
-            pickedDate.year,
-            pickedDate.month,
-            pickedDate.day,
-            pickedTime.hour,
-            pickedTime.minute,
-          );
-        });
+        selectedDateTime.value = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
       }
     }
   }
 
-  // save task to firestore
+  // save / update task to firestore
   Future<void> _saveTimerToFirestore() async {
-    if (_titleController.text.isEmpty || selectedDateTime == null) {
+    if (_titleController.text.isEmpty || selectedDateTime.value == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,
@@ -87,8 +87,9 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    _isLoading.value = true;
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null && !widget.isEditing) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -100,7 +101,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
           backgroundColor: Colors.black,
         ),
       );
-      setState(() => _isLoading = false);
+      _isLoading.value = false;
       return;
     }
 
@@ -112,9 +113,9 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
             .doc(widget.docId)
             .update({
               'title': _titleController.text.trim(),
-              'category': _selectedCategory ?? 'Personal',
-              'datetime': Timestamp.fromDate(selectedDateTime!),
-              'isCountDown': isCountdown,
+              'category': selectedCategory.value ?? 'Personal',
+              'datetime': Timestamp.fromDate(selectedDateTime.value!),
+              'isCountDown': isCountdown.value,
               'updatedAt': FieldValue.serverTimestamp(),
             });
 
@@ -133,10 +134,10 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
         await FirebaseFirestore.instance.collection('timers').add({
           'uid': user!.uid,
           'title': _titleController.text.trim(),
-          'category': _selectedCategory ?? 'Personal',
-          'datetime': Timestamp.fromDate(selectedDateTime!),
+          'category': selectedCategory.value ?? 'Personal',
+          'datetime': Timestamp.fromDate(selectedDateTime.value!),
           'createdAt': FieldValue.serverTimestamp(),
-          'isCountDown': isCountdown,
+          'isCountDown': isCountdown.value,
           'isPinned': false,
         });
 
@@ -166,15 +167,20 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
         ),
       );
     } finally {
-      setState(() => _isLoading = false);
+      _isLoading.value = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    String formattedDateTime = selectedDateTime == null
-        ? ''
-        : DateFormat('MMM d, yyyy hh:mm a').format(selectedDateTime!);
+    ValueListenableBuilder(
+      valueListenable: selectedDateTime,
+      builder: (_, date, __) {
+        return date == null
+            ? SizedBox()
+            : Text(DateFormat('MMM d, yyyy hh:mm a').format(date));
+      },
+    );
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -187,7 +193,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "New Timer",
+          widget.isEditing ? "Edit Timer" : "New Timer",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -197,6 +203,7 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Title Input
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -209,38 +216,42 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
             ),
             const SizedBox(height: 15),
 
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              value: _selectedCategory,
-              items:
-                  [
-                        'Work',
-                        'Study',
-                        'Fitness',
-                        'Shopping',
-                        'Sleep',
-                        'Personal',
-                        'Fun',
-                        'Art',
-                        'BusinessWork',
-                      ]
-                      .map(
-                        (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
-                      )
-                      .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCategory = value;
-                });
+            // CATEGORY DROPDOWN
+            ValueListenableBuilder(
+              valueListenable: selectedCategory,
+              builder: (context, category, _) {
+                return DropdownButtonFormField<String>(
+                  value: category,
+                  decoration: InputDecoration(
+                    labelText: 'Category',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  items:
+                      [
+                            'Work',
+                            'Study',
+                            'Fitness',
+                            'Shopping',
+                            'Sleep',
+                            'Personal',
+                            'Fun',
+                            'Art',
+                            'BusinessWork',
+                          ]
+                          .map(
+                            (cat) =>
+                                DropdownMenuItem(value: cat, child: Text(cat)),
+                          )
+                          .toList(),
+                  onChanged: (value) => selectedCategory.value = value,
+                );
               },
             ),
             const SizedBox(height: 20),
 
+            // DATE & TIME PICKER
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -266,14 +277,17 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                     ),
                   ),
                 ),
-                if (selectedDateTime != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5.0, bottom: 5.0),
-                    child: Text(
-                      formattedDateTime,
+
+                ValueListenableBuilder<DateTime?>(
+                  valueListenable: selectedDateTime,
+                  builder: (_, date, __) {
+                    if (date == null) return const SizedBox();
+                    return Text(
+                      DateFormat('MMM d, yyyy hh:mm a').format(date),
                       style: const TextStyle(fontSize: 15),
-                    ),
-                  ),
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -291,15 +305,18 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                     'Is this a countdown timer?',
                     style: TextStyle(color: Colors.black87, fontSize: 16),
                   ),
-                  Switch(
-                    value: isCountdown,
-                    onChanged: (bool value) {
-                      setState(() {
-                        isCountdown = value;
-                      });
+                  ValueListenableBuilder(
+                    valueListenable: isCountdown,
+                    builder: (context, value, _) {
+                      return Switch(
+                        value: isCountdown.value,
+                        onChanged: (bool value) {
+                          isCountdown.value = value;
+                        },
+                        activeColor: const Color.fromARGB(255, 32, 82, 233),
+                        activeTrackColor: Colors.white,
+                      );
                     },
-                    activeColor: const Color.fromARGB(255, 32, 82, 233),
-                    activeTrackColor: Colors.white,
                   ),
                 ],
               ),
@@ -307,6 +324,8 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
           ],
         ),
       ),
+
+      // BOTTOM BUTTONS
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
@@ -317,7 +336,9 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
                 child: SizedBox(
                   height: 46,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : () => Navigator.pop(context),
+                    onPressed: _isLoading.value
+                        ? null
+                        : () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color.fromARGB(146, 236, 224, 224),
                       shape: RoundedRectangleBorder(
@@ -340,33 +361,43 @@ class _CreateNewTimePageState extends State<CreateNewTimerPage> {
 
               // CONFIRM Button
               Expanded(
-                child: SizedBox(
-                  height: 46,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _saveTimerToFirestore,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 32, 82, 233),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'CONFIRM',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.normal,
-                            ),
+                child: ValueListenableBuilder(
+                  valueListenable: _isLoading,
+                  builder: (_, loading, __) {
+                    return SizedBox(
+                      height: 46,
+                      child: ElevatedButton(
+                        onPressed: loading ? null : _saveTimerToFirestore,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(
+                            255,
+                            32,
+                            82,
+                            233,
                           ),
-                  ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: loading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'CONFIRM',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

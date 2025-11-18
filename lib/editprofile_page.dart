@@ -12,47 +12,64 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
+  final ValueNotifier<bool> _isLoading = ValueNotifier(false);
 
   @override
   void initState() {
     super.initState();
+
+    // Set Firebase locale to avoid warnings
+    FirebaseAuth.instance.setLanguageCode('en');
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      //autofilll anema email
       _nameController.text = user.displayName ?? '';
       _emailController.text = user.email ?? '';
+      print(
+        "Init name: ${_nameController.text}, email: ${_emailController.text}",
+      );
     }
   }
 
   Future<void> saveUserInfo() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    _isLoading.value = true;
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception("User not logged in");
-      }
+      if (user == null) throw Exception("User not logged in");
 
       final name = _nameController.text.trim();
       final email = _emailController.text.trim();
 
-      //update firbase auth
+      print("Updating name: $name, email: $email");
+
+      // Update Firebase Auth displayName
       await user.updateDisplayName(name);
 
+      // Update Firestore user document
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
         {'name': name, 'updatedAt': FieldValue.serverTimestamp()},
-      ); // remove old doc if you want
+      );
 
-      // Reload Ui updated
+      // Reload user to get updated info
       await user.reload();
+      final updatedUser = FirebaseAuth.instance.currentUser;
 
+      // Update controllers so UI reflects new data instantly
+      _nameController.text = updatedUser?.displayName ?? '';
+      _emailController.text = updatedUser?.email ?? '';
+      print(
+        "Updated name: ${_nameController.text}, email: ${_emailController.text}",
+      );
+
+      _isLoading.value = false;
+
+      // Show success dialog
       if (mounted) {
-        setState(() => _isLoading = false);
-
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -87,7 +104,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    "Your Details Has Successfully Changesd!",
+                    "Your Details Has Successfully Changed!",
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -120,16 +137,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
     } catch (e) {
       print("Error updating profile: $e");
+      _isLoading.value = false;
       if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
-            content: Text('Error updating info: $e')));
+            content: Text('Error updating info: $e'),
+          ),
+        );
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _isLoading.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
   }
 
   @override
@@ -137,8 +162,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 246, 255),
-        //automaticallyImplyLeading: false, //backbutton false
+        backgroundColor: const Color.fromARGB(255, 246, 246, 255),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
@@ -185,9 +209,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 30),
-
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
@@ -201,12 +223,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ? 'Please enter your name'
                     : null,
               ),
-
               const SizedBox(height: 15),
-
               TextFormField(
                 controller: _emailController,
-                //textCapitalization: TextCapitalization.none,
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'Email',
@@ -228,41 +247,45 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ),
       ),
-
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
           child: SizedBox(
             width: double.infinity,
             height: 46,
-            child: ElevatedButton(
-              onPressed: _isLoading
-                  ? null
-                  : () {
-                      if (_formKey.currentState!.validate()) {
-                        saveUserInfo();
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 32, 82, 233),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(color: Colors.white),
-                    )
-                  : const Text(
-                      'SAVE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.normal,
-                      ),
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _isLoading,
+              builder: (_, loading, __) {
+                return ElevatedButton(
+                  onPressed: loading
+                      ? null
+                      : () {
+                          if (_formKey.currentState!.validate()) {
+                            saveUserInfo();
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 32, 82, 233),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
                     ),
+                  ),
+                  child: loading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                      : const Text(
+                          'SAVE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                );
+              },
             ),
           ),
         ),

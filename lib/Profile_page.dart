@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:life_timerz/editprofile_page.dart';
 import 'package:life_timerz/login_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -12,10 +13,8 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  String _name = "";
-  String _email = "";
-  bool _isLogoutPressed = false;
-  bool _isChangePasswordPressed = false;
+  final ValueNotifier<bool> isLogoutPressed = ValueNotifier(false);
+  final ValueNotifier<bool> isChangePasswordPressed = ValueNotifier(false);
 
   User? _user;
 
@@ -23,13 +22,9 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _user = FirebaseAuth.instance.currentUser;
-
-    if (_user != null) {
-      _name = _user!.displayName ?? "No Name Availabe";
-      _email = _user!.email ?? "No Email Availabe";
-    }
   }
 
+  //profile logout dialog
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -108,7 +103,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 await FirebaseAuth.instance.signOut();
                 if (context.mounted) {
                   Navigator.pushAndRemoveUntil(
-                    //after logout we cant back to profilr page
                     context,
                     MaterialPageRoute(builder: (context) => const LoginPage()),
                     (routes) => false,
@@ -135,227 +129,238 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   @override
+  void dispose() {
+    isLogoutPressed.dispose();
+    isChangePasswordPressed.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final userUid = FirebaseAuth.instance.currentUser!.uid;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 246, 255),
-        automaticallyImplyLeading: false, // backbutton false
+        backgroundColor: const Color.fromARGB(255, 246, 246, 255),
+        automaticallyImplyLeading: false,
         toolbarHeight: 0,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                alignment: Alignment.center,
-                child: Stack(
-                  alignment: AlignmentGeometry.bottomCenter,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(15.0),
-                      child: CircleAvatar(
-                        radius: 60,
-                        backgroundImage: NetworkImage(
-                          'https://picsum.photos/250',
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 5,
-                      child: CircleAvatar(
-                        radius: 15,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.camera_alt,
-                          size: 20,
-                          color: Color.fromARGB(255, 32, 82, 233),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+        child: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(userUid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              Text(
-                _name,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
+            final data = snapshot.data!;
+            final name = data['name'] ?? "No Name Available";
+            final email = _user?.email ?? "No Email Available";
 
-              Text(
-                _email,
-                style: TextStyle(fontSize: 15, color: Colors.grey[600]),
-              ),
-
-              const SizedBox(height: 5),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EditProfilePage(),
-                    ),
-                  );
-                  // reload updateduser data -> edit
-                  await FirebaseAuth.instance.currentUser?.reload();
-                  final updatedUser = FirebaseAuth.instance.currentUser;
-
-                  if (updatedUser != null) {
-                    setState(() {
-                      _user = updatedUser;
-                      _name = updatedUser.displayName ?? _name;
-                      _email = updatedUser.email ?? _email;
-                    });
-                  }
-                },
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  color: Colors.white,
-                  size: 22,
-                ),
-                label: const Text(
-                  'EDIT',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color.fromARGB(255, 32, 82, 233),
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Column(
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                    child: Text(
-                      'Overview',
-                      style: TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  // ListTile(
-                  //   contentPadding: const EdgeInsets.symmetric(horizontal: 0),
-                  //   horizontalTitleGap: 13,
-                  //   minVerticalPadding: 0,
-                  //   dense: true,
-                  //   leading: Icon(Icons.subscriptions_outlined),
-                  //   title: Text('Subscription', style: TextStyle(fontSize: 14)),
-                  //   trailing: Icon(
-                  //     Icons.arrow_forward_ios,
-                  //     size: 16,
-                  //     color: Colors.black,
-                  //   ),
-                  // ),
-                  Divider(height: 1, color: Colors.grey[300]),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 0),
-                    horizontalTitleGap: 13,
-                    minVerticalPadding: 0,
-                    dense: true,
-                    leading: Icon(
-                      Icons.lock_outline,
-                      color: _isChangePasswordPressed
-                          ? Colors.red
-                          : Colors.black,
-                    ),
-                    title: Text(
-                      'Change Password',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _isChangePasswordPressed
-                            ? Colors.red
-                            : Colors.black,
-                      ),
-                    ),
-                    trailing: Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: _isChangePasswordPressed
-                          ? Colors.red
-                          : Colors.black,
-                    ),
-                    onTap: () async {
-                      setState(() => _isChangePasswordPressed = true);
-                      await Future.delayed(const Duration(milliseconds: 150));
-
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user != null && user.email != null) {
-                        try {
-                          await FirebaseAuth.instance.sendPasswordResetEmail(
-                            email: user.email!,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              behavior: SnackBarBehavior.floating,
-                              content: Text(
-                                'Password reset email sent successfully!',
-                                style: TextStyle(color: Colors.green),
-                              ),
-                              backgroundColor: Colors.black,
+                  Container(
+                    width: double.infinity,
+                    alignment: Alignment.center,
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(15.0),
+                          child: const CircleAvatar(
+                            radius: 60,
+                            backgroundImage: NetworkImage(
+                              'https://picsum.photos/250',
                             ),
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
-                        }
-                      }
-                      setState(() => _isChangePasswordPressed = false);
-                    },
-                  ),
-                  Divider(height: 1, color: Colors.grey[300]),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 0),
-                    horizontalTitleGap: 13,
-                    minVerticalPadding: 0,
-                    dense: true,
-                    leading: Icon(
-                      Icons.logout_outlined,
-                      color: _isLogoutPressed ? Colors.red : Colors.black,
+                          ),
+                        ),
+                        const Positioned(
+                          bottom: 5,
+                          child: CircleAvatar(
+                            radius: 15,
+                            backgroundColor: Colors.white,
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 20,
+                              color: Color.fromARGB(255, 32, 82, 233),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    title: Text(
-                      'Logout',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _isLogoutPressed ? Colors.red : Colors.black,
+                  ),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    email,
+                    style: TextStyle(fontSize: 15, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 5),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfilePage(),
+                        ),
+                      );
+                      // StreamBuilder auto updates UI, no manual reload needed
+                    },
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                    label: const Text(
+                      'EDIT',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 32, 82, 233),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    trailing: Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: _isLogoutPressed ? Colors.red : Colors.black,
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: ListView(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 15),
+                          child: Text(
+                            'Overview',
+                            style: TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Divider(height: 1, color: Colors.grey[300]),
+                        ValueListenableBuilder(
+                          valueListenable: isChangePasswordPressed,
+                          builder: (context, pressed, child) {
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 0,
+                              ),
+                              horizontalTitleGap: 13,
+                              dense: true,
+                              leading: Icon(
+                                Icons.lock_outline,
+                                color: pressed ? Colors.red : Colors.black,
+                              ),
+                              title: Text(
+                                'Change Password',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: pressed ? Colors.red : Colors.black,
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: pressed ? Colors.red : Colors.black,
+                              ),
+                              onTap: () async {
+                                isChangePasswordPressed.value = true;
+                                await Future.delayed(
+                                  const Duration(milliseconds: 150),
+                                );
+
+                                final user = FirebaseAuth.instance.currentUser;
+                                if (user != null && user.email != null) {
+                                  try {
+                                    await FirebaseAuth.instance
+                                        .sendPasswordResetEmail(
+                                          email: user.email!,
+                                        );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        behavior: SnackBarBehavior.floating,
+                                        content: Text(
+                                          'Password reset email sent successfully!',
+                                          style: TextStyle(color: Colors.green),
+                                        ),
+                                        backgroundColor: Colors.black,
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                }
+                                isChangePasswordPressed.value = false;
+                              },
+                            );
+                          },
+                        ),
+                        Divider(height: 1, color: Colors.grey[300]),
+                        ValueListenableBuilder(
+                          valueListenable: isLogoutPressed,
+                          builder: (context, pressed, _) {
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 0,
+                              ),
+                              horizontalTitleGap: 13,
+                              dense: true,
+                              leading: Icon(
+                                Icons.logout_outlined,
+                                color: pressed ? Colors.red : Colors.black,
+                              ),
+                              title: Text(
+                                'Logout',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: pressed ? Colors.red : Colors.black,
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: pressed ? Colors.red : Colors.black,
+                              ),
+                              onTap: () {
+                                isLogoutPressed.value = true;
+                                Future.delayed(
+                                  const Duration(milliseconds: 150),
+                                  () {
+                                    _showLogoutDialog(context);
+                                    isLogoutPressed.value = false;
+                                  }, 
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    onTap: () {
-                      setState(() {
-                        _isLogoutPressed = true;
-                      });
-                      Future.delayed(Duration(milliseconds: 150), () {
-                        _showLogoutDialog(context);
-                        setState(() {
-                          _isLogoutPressed = false;
-                        });
-                      });
-                    },
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

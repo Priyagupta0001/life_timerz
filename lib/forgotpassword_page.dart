@@ -15,8 +15,6 @@ class _ForgotpasswordPageState extends State<ForgotpasswordPage> {
   Future<void> sendResetLink() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {});
-
     final email = _emailController.text.trim();
 
     try {

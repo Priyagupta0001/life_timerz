@@ -13,8 +13,8 @@ void main() async {
 
   // Delay splash manually
   await Future.delayed(const Duration(seconds: 3));
-
-  FlutterNativeSplash.remove(); // VERY IMPORTANT
+  FlutterNativeSplash.remove(); 
+  
   runApp(const MyApp());
 }
 

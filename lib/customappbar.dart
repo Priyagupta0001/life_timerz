@@ -11,6 +11,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.centerTitle = true,
     required Color backgroundColor,
+    required TextStyle style,
   });
 
   @override

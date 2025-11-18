@@ -11,9 +11,10 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  //firebase connected - firebase auth object
+  // Firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -21,11 +22,13 @@ class _SignUpPageState extends State<SignUpPage> {
       TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _isLoading = false;
 
-  //Signup Function
+  // ValueNotifiers
+  final ValueNotifier<bool> _obscurePassword = ValueNotifier(true);
+  final ValueNotifier<bool> _obscureConfirmPassword = ValueNotifier(true);
+  final ValueNotifier<bool> _isLoading = ValueNotifier(false);
+
+  // Signup Function
   Future<void> signUpUser() async {
     if (_passwordController.text.trim() !=
         _confirmPasswordController.text.trim()) {
@@ -38,9 +41,7 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    _isLoading.value = true;
 
     try {
       UserCredential userCredential = await FirebaseAuth.instance
@@ -95,7 +96,6 @@ class _SignUpPageState extends State<SignUpPage> {
         SnackBar(
           content: Text(message, style: const TextStyle(color: Colors.red)),
           backgroundColor: Colors.black,
-          
         ),
       );
     } catch (e) {
@@ -109,9 +109,7 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      _isLoading.value = false;
     }
   }
 
@@ -121,6 +119,9 @@ class _SignUpPageState extends State<SignUpPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _obscurePassword.dispose();
+    _obscureConfirmPassword.dispose();
+    _isLoading.dispose();
     super.dispose();
   }
 
@@ -128,10 +129,9 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Color.fromARGB(255, 246, 246, 255),
+        backgroundColor: const Color.fromARGB(255, 246, 246, 255),
         toolbarHeight: 12,
       ),
       resizeToAvoidBottomInset: true,
@@ -142,7 +142,7 @@ class _SignUpPageState extends State<SignUpPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                //Logo top
+                // Logo top
                 Container(
                   width: double.infinity,
                   height: 140,
@@ -160,7 +160,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                 ),
 
-                //signup Heading
+                // Signup Heading
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 30, horizontal: 20),
                   child: Column(
@@ -186,7 +186,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                 ),
 
-                // name, email, password, confirmpassword
+                // Form fields
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -236,129 +236,144 @@ class _SignUpPageState extends State<SignUpPage> {
                         },
                       ),
                       const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: const TextStyle(color: Colors.black),
-                          prefixIcon: const Icon(
-                            Icons.lock_outline,
-                            color: Colors.black,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: Colors.black,
+                      // Password
+                      ValueListenableBuilder<bool>(
+                        valueListenable: _obscurePassword,
+                        builder: (context, obscure, _) {
+                          return TextFormField(
+                            controller: _passwordController,
+                            obscureText: obscure,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              labelStyle: const TextStyle(color: Colors.black),
+                              prefixIcon: const Icon(
+                                Icons.lock_outline,
+                                color: Colors.black,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  obscure
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Colors.black,
+                                ),
+                                onPressed: () {
+                                  _obscurePassword.value = !obscure;
+                                },
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter password';
+                              } else if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
                             },
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter password';
-                          } else if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
+                          );
                         },
                       ),
                       const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _confirmPasswordController,
-                        obscureText: _obscureConfirmPassword,
-                        decoration: InputDecoration(
-                          labelText: 'Confirm Password',
-                          labelStyle: const TextStyle(color: Colors.black),
-                          prefixIcon: const Icon(
-                            Icons.lock_outline,
-                            color: Colors.black,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirmPassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: Colors.black,
+                      // Confirm Password
+                      ValueListenableBuilder<bool>(
+                        valueListenable: _obscureConfirmPassword,
+                        builder: (context, obscure, _) {
+                          return TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: obscure,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm Password',
+                              labelStyle: const TextStyle(color: Colors.black),
+                              prefixIcon: const Icon(
+                                Icons.lock_outline,
+                                color: Colors.black,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  obscure
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Colors.black,
+                                ),
+                                onPressed: () {
+                                  _obscureConfirmPassword.value = !obscure;
+                                },
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureConfirmPassword =
-                                    !_obscureConfirmPassword;
-                              });
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please confirm password';
+                              }
+                              return null;
                             },
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please confirm password';
-                          }
-                          return null;
+                          );
                         },
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                //signup button use
+                // Signup button
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 8,
                   ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              if (_formKey.currentState!.validate()) {
-                                signUpUser();
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 32, 82, 233),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Text(
-                              'SIGN UP',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.normal,
-                              ),
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _isLoading,
+                    builder: (context, loading, _) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: loading
+                              ? null
+                              : () {
+                                  if (_formKey.currentState!.validate()) {
+                                    signUpUser();
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              32,
+                              82,
+                              233,
                             ),
-                    ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          child: loading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Text(
+                                  'SIGN UP',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
                   ),
                 ),
 
-                //--or--divider
+                // --or-- divider
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 100, vertical: 6),
                   child: Row(
@@ -376,7 +391,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                 ),
 
-                //Already have account text
+                // Already have account
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: Row(
