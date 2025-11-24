@@ -14,17 +14,21 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
+  provider: ^6.1.5+1
   firebase_core: ^4.2.0
   firebase_auth: ^6.1.1
   cloud_firestore: ^6.0.3
   flutter_otp_text_field: ^1.5.1+1
   google_sign_in: ^6.2.1
   intl: ^0.20.2
+  persistent_bottom_nav_bar: ^6.2.1
   flutter_local_notifications: ^19.5.0
   permission_handler: ^11.3.1
   timezone: ^0.10.1
   shared_preferences: ^2.3.2
   flutter_native_splash: ^2.4.7
+  collection: ^1.17.0
+  flutter_screenutil: ^5.9.3
 
 dev_dependencies:
  
