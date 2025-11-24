@@ -211,13 +211,13 @@ class _LogInUIState extends State<LogInUI> {
                                         listen: false,
                                       ).setUser(loggedInUser!);
 
-                                      // 2️⃣ Show success message
+                                      // Show success message
                                       appMsg.showSuccess(
                                         "Login successful!",
                                         context,
                                       );
 
-                                      // 3️⃣ Navigate to home
+                                      // Navigate to home
                                       Navigator.pushReplacementNamed(
                                         context,
                                         '/home',

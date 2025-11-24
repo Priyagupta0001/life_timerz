@@ -108,11 +108,13 @@ class AddTaskListUI extends StatelessWidget {
                           String? msg;
                           if (direction == DismissDirection.startToEnd) {
                             msg = await taskProvider.markCompleted(t.id);
-                            if (msg != null) showmessage.showSuccess(msg, context);
+                            if (msg != null)
+                              showmessage.showSuccess(msg, context);
                             return false;
                           } else if (direction == DismissDirection.endToStart) {
                             msg = await taskProvider.deleteTask(index);
-                            if (msg != null) showmessage.showError(msg, context);
+                            if (msg != null)
+                              showmessage.showError(msg, context);
                             return true;
                           }
                           return false;
@@ -188,7 +190,9 @@ class AddTaskListUI extends StatelessWidget {
                                   size: 22.sp,
                                 ),
                                 onPressed: () async {
-                                  final msg = await taskProvider.togglePin(t.id);
+                                  final msg = await taskProvider.togglePin(
+                                    t.id,
+                                  );
                                   if (msg != null) {
                                     final pinnedNow = !isPinned;
                                     pinnedNow
@@ -230,11 +234,14 @@ class CountdownText extends StatelessWidget {
   }
 
   String _getRemaining(Map<String, dynamic> taskData) {
-    final done = taskData['isCompleted'] ?? false;
+    final bool done = taskData['isCompleted'] ?? false; //manual cmplte
+    final DateTime targetTime = (taskData['datetime'] as Timestamp).toDate();
     final now = DateTime.now();
     final diff = targetTime.difference(now);
 
-    if (done || diff.isNegative) return "Completed!";
+    if (done) return "Completed!"; //manual
+
+    if (diff.isNegative) return "Completed!"; //automatically
 
     final days = diff.inDays;
     final hours = diff.inHours % 24;

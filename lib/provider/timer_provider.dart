@@ -68,11 +68,32 @@ class TimerProvider extends ChangeNotifier {
         "datetime": Timestamp.fromDate(_selectedDateTime!),
         "isCountDown": _isCountdown,
       };
-
+      
+      bool newCompletedStatus = false;
+      final now = DateTime.now();
       if (docId != null) {
-        await FirebaseFirestore.instance.collection("timers").doc(docId).update(
-          {...data, "updatedAt": FieldValue.serverTimestamp()},
-        );
+        final docSnap = await FirebaseFirestore.instance
+            .collection("timers")
+            .doc(docId)
+            .get();
+        final existingCompleted = docSnap['isCompleted'] ?? false;
+
+        // Agar existing task manually completed hai
+        // lekin naya datetime future me hai, to countdown wapas start karenge
+        if (existingCompleted && _selectedDateTime!.isAfter(now)) {
+          newCompletedStatus = false; // countdown wapas
+        } else {
+          newCompletedStatus = existingCompleted;
+        }
+
+        await FirebaseFirestore.instance
+            .collection("timers")
+            .doc(docId)
+            .update({
+              ...data,
+              "updatedAt": FieldValue.serverTimestamp(),
+              "isCompleted": newCompletedStatus,
+            });
         _isLoading = false;
         notifyListeners();
         return "updated";

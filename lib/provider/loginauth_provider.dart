@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -24,7 +25,7 @@ class LoginAuthProvider extends ChangeNotifier {
     _passwordController.clear();
     notifyListeners();
   }
-  
+
   // LOGIN
   Future<String> logIn(BuildContext context) async {
     final email = _emailController.text.trim();
@@ -67,7 +68,24 @@ class LoginAuthProvider extends ChangeNotifier {
         idToken: googleAuth.idToken,
       );
 
-      await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user != null) {
+        final userDoc = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid);
+        final docSnap = await userDoc.get();
+        if (!docSnap.exists) {
+          // First time login → create Firestore document
+          await userDoc.set({
+            'uid': user.uid,
+            'email': user.email,
+            'name': user.displayName ?? '', // Google name or empty
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
 
       _setLoading(false);
       return "success";

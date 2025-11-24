@@ -494,7 +494,7 @@ class HomeUI extends StatelessWidget {
                 icon: Icon(
                   isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                   color: isPinned
-                      ? const Color.fromRGBO(33, 150, 243, 1)
+                      ? const Color.fromARGB(255, 8, 64, 233)
                       : Colors.grey,
                   size: 22.sp,
                 ),
@@ -530,11 +530,13 @@ class CountdownText extends StatelessWidget {
   }
 
   String _getRemaining(Map<String, dynamic> taskData) {
-    final isCompleted = taskData['isCompleted'] ?? false;
+    final bool done = taskData['isCompleted'] ?? false;
+    final DateTime targetTime = (taskData['datetime'] as Timestamp).toDate();
     final now = DateTime.now();
     final diff = targetTime.difference(now);
 
-    if (isCompleted || diff.isNegative) return "Completed!";
+    if (done) return "Completed!";
+    if (diff.isNegative) return "Completed!";
 
     final days = diff.inDays;
     final hours = diff.inHours % 24;
