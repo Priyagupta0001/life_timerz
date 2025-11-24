@@ -27,6 +27,12 @@ class ProfileProvider extends ChangeNotifier {
     _fetchUserData();
   }
 
+  void setUser(User newUser) {
+    _user = newUser;
+    _fetchUserData(); // naya user ka data fetch
+    notifyListeners();
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

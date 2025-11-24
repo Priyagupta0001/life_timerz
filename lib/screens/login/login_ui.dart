@@ -1,6 +1,10 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:life_timerz/provider/loginauth_provider.dart';
+import 'package:life_timerz/provider/profileprovider.dart';
 
 import 'package:life_timerz/screens/forgotpassword/forgotpassword_ui.dart';
 import 'package:life_timerz/screens/signup/signup_ui.dart';
@@ -200,10 +204,20 @@ class _LogInUIState extends State<LogInUI> {
                                       context,
                                     );
                                     if (res == "success") {
+                                      User? loggedInUser =
+                                          FirebaseAuth.instance.currentUser;
+                                      Provider.of<ProfileProvider>(
+                                        context,
+                                        listen: false,
+                                      ).setUser(loggedInUser!);
+
+                                      // 2️⃣ Show success message
                                       appMsg.showSuccess(
                                         "Login successful!",
                                         context,
                                       );
+
+                                      // 3️⃣ Navigate to home
                                       Navigator.pushReplacementNamed(
                                         context,
                                         '/home',

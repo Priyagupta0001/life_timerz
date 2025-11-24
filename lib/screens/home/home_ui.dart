@@ -103,7 +103,7 @@ class HomeUI extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       padding: EdgeInsets.symmetric(
-                        horizontal: 40.w,
+                        horizontal: 115.w,
                         vertical: 12.h,
                       ),
                     ),
@@ -355,7 +355,7 @@ class HomeUI extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: EdgeInsets.all(18.w),
-          margin: EdgeInsets.symmetric(horizontal: 6.w),
+          margin: EdgeInsets.symmetric(horizontal: 4.w),
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(8.r),
@@ -477,7 +477,7 @@ class HomeUI extends StatelessWidget {
                     Row(
                       children: [
                         Icon(Icons.access_time, size: 20.sp),
-                        SizedBox(width: 6.w),
+                        SizedBox(width: 4.w),
                         Expanded(
                           child: CountdownText(
                             taskId: id,
@@ -565,7 +565,7 @@ class CountdownText extends StatelessWidget {
                 fontSize: 12.sp,
               ),
               overflow: TextOverflow.ellipsis,
-    maxLines: 1,
+              maxLines: 1,
             );
           },
         );

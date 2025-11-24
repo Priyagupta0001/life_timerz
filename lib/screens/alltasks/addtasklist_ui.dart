@@ -3,7 +3,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ Added
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:life_timerz/provider/task_provider.dart';
 import 'package:life_timerz/widgets/app_message.dart';
@@ -30,166 +30,182 @@ class AddTaskListUI extends StatelessWidget {
       );
     }
 
+    final tasks = taskProvider.sortedTasks;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: taskProvider.sortedTasks.length,
-              itemBuilder: (_, index) {
-                final t = taskProvider.sortedTasks[index];
-                final data = t.data;
-
-                // Parse datetime
-                final raw = data['datetime'];
-                DateTime datetime;
-
-                if (raw is Timestamp) {
-                  datetime = raw.toDate();
-                } else if (raw is DateTime) {
-                  datetime = raw;
-                } else {
-                  datetime =
-                      DateTime.tryParse(raw.toString()) ?? DateTime.now();
-                }
-
-                final isPinned = data['isPinned'] ?? false;
-                final isCompleted = data['isCompleted'] ?? false;
-
-                return Dismissible(
-                  key: Key(t.id),
-
-                  background: Container(
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.only(left: 20.w),
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Icon(
-                      Icons.check_circle_outline,
-                      color: Colors.white,
-                      size: 24.sp,
-                    ),
+      body: tasks.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "No tasks found!",
+                    style: TextStyle(fontSize: 16.sp, color: Colors.grey),
                   ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: tasks.length,
+                    itemBuilder: (_, index) {
+                      final t = tasks[index];
+                      final data = t.data;
 
-                  secondaryBackground: Container(
-                    alignment: Alignment.centerRight,
-                    padding: EdgeInsets.only(right: 20.w),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Icon(
-                      Icons.delete_outline,
-                      color: Colors.white,
-                      size: 24.sp,
-                    ),
-                  ),
+                      // Parse datetime
+                      final raw = data['datetime'];
+                      DateTime datetime;
 
-                  direction: DismissDirection.horizontal,
+                      if (raw is Timestamp) {
+                        datetime = raw.toDate();
+                      } else if (raw is DateTime) {
+                        datetime = raw;
+                      } else {
+                        datetime =
+                            DateTime.tryParse(raw.toString()) ?? DateTime.now();
+                      }
 
-                  confirmDismiss: (direction) async {
-                    String? msg;
-                    if (direction == DismissDirection.startToEnd) {
-                      msg = await taskProvider.markCompleted(t.id);
-                      if (msg != null) showmessage.showSuccess(msg, context);
-                      return false;
-                    } else if (direction == DismissDirection.endToStart) {
-                      msg = await taskProvider.deleteTask(index);
-                      if (msg != null) showmessage.showError(msg, context);
-                      return true;
-                    }
-                    return false;
-                  },
+                      final isPinned = data['isPinned'] ?? false;
+                      final isCompleted = data['isCompleted'] ?? false;
 
-                  child: Container(
-                    width: double.infinity,
-                    margin: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 5.h,
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      vertical: 14.h,
-                      horizontal: 6.w,
-                    ),
+                      return Dismissible(
+                        key: Key(t.id),
 
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.15),
-                          blurRadius: 8.r,
-                          offset: Offset(0, 4.h),
+                        background: Container(
+                          alignment: Alignment.centerLeft,
+                          padding: EdgeInsets.only(left: 20.w),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.white,
+                            size: 24.sp,
+                          ),
                         ),
-                      ],
-                    ),
 
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Title - Category
-                              Text(
-                                "${data['category']} - ${data['title']}",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16.sp,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                        secondaryBackground: Container(
+                          alignment: Alignment.centerRight,
+                          padding: EdgeInsets.only(right: 20.w),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
+                            size: 24.sp,
+                          ),
+                        ),
+
+                        direction: DismissDirection.horizontal,
+
+                        confirmDismiss: (direction) async {
+                          String? msg;
+                          if (direction == DismissDirection.startToEnd) {
+                            msg = await taskProvider.markCompleted(t.id);
+                            if (msg != null) showmessage.showSuccess(msg, context);
+                            return false;
+                          } else if (direction == DismissDirection.endToStart) {
+                            msg = await taskProvider.deleteTask(index);
+                            if (msg != null) showmessage.showError(msg, context);
+                            return true;
+                          }
+                          return false;
+                        },
+
+                        child: Container(
+                          width: double.infinity,
+                          margin: EdgeInsets.symmetric(
+                            horizontal: 10.w,
+                            vertical: 5.h,
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            vertical: 18.h,
+                            horizontal: 17.w,
+                          ),
+
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.15),
+                                blurRadius: 8.r,
+                                offset: Offset(0, 4.h),
                               ),
-                              SizedBox(height: 6.h),
+                            ],
+                          ),
 
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.access_time,
-                                    size: 18.sp,
-                                    color: Colors.black87,
-                                  ),
-                                  SizedBox(width: 6.w),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Title - Category
+                                    Text(
+                                      "${data['category']} - ${data['title']}",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16.sp,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    SizedBox(height: 6.h),
 
-                                  CountdownText(
-                                    targetTime: datetime,
-                                    isCompleted: isCompleted,
-                                    taskId: t.id,
-                                  ),
-                                ],
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.access_time,
+                                          size: 18.sp,
+                                          color: Colors.black87,
+                                        ),
+                                        SizedBox(width: 6.w),
+
+                                        CountdownText(
+                                          targetTime: datetime,
+                                          isCompleted: isCompleted,
+                                          taskId: t.id,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              IconButton(
+                                icon: Icon(
+                                  isPinned
+                                      ? Icons.push_pin
+                                      : Icons.push_pin_outlined,
+                                  color: isPinned ? Colors.blue : Colors.grey,
+                                  size: 22.sp,
+                                ),
+                                onPressed: () async {
+                                  final msg = await taskProvider.togglePin(t.id);
+                                  if (msg != null) {
+                                    final pinnedNow = !isPinned;
+                                    pinnedNow
+                                        ? showmessage.showSuccess(msg, context)
+                                        : showmessage.showError(msg, context);
+                                  }
+                                },
                               ),
                             ],
                           ),
                         ),
-
-                        IconButton(
-                          icon: Icon(
-                            isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                            color: isPinned ? Colors.blue : Colors.grey,
-                            size: 22.sp,
-                          ),
-                          onPressed: () async {
-                            final msg = await taskProvider.togglePin(t.id);
-                            if (msg != null) {
-                              final pinnedNow = !isPinned;
-                              pinnedNow
-                                  ? showmessage.showSuccess(msg, context)
-                                  : showmessage.showError(msg, context);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
