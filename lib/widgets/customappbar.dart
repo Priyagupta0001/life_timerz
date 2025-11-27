@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -11,7 +12,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     required this.selectedIndex,
     this.sortOptions,
-    this.onSortChanged, required Color backgroundColor, required String selectedSort, required TextStyle style,
+    this.onSortChanged,
+    required Color backgroundColor,
+    required String selectedSort,
+    required TextStyle style,
   });
 
   @override
@@ -20,27 +24,30 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color.fromARGB(255, 222, 222, 230),
+      backgroundColor: const Color.fromARGB(255, 246, 246, 255),
       automaticallyImplyLeading: false,
       toolbarHeight: 70,
+      centerTitle: true, // Properly center the title
       elevation: 0,
-      centerTitle: true,
-      title: Padding(
-        padding: const EdgeInsets.only(top: 8.0),
-        child: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
         ),
       ),
-      actions: (selectedIndex == 1 && sortOptions != null && onSortChanged != null)
+      actions:
+          (selectedIndex == 1 && sortOptions != null && onSortChanged != null)
           ? [
               Padding(
                 padding: const EdgeInsets.only(right: 15.0),
                 child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.sort_outlined, color: Colors.black,size: 30),
+                  icon: const Icon(
+                    Icons.sort_outlined,
+                    color: Colors.black,
+                    size: 30,
+                  ),
                   onSelected: (value) {
                     onSortChanged!(value);
                   },

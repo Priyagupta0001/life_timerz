@@ -1,3 +1,5 @@
+import 'dart:core';
+
 class TimerModel {
   String? id;
   final String uid;
@@ -22,7 +24,7 @@ class TimerModel {
       'category': category,
       'datetime': dateTime,
       'isCountDown': isCountDown,
-      'createdAt': DateTime.now(),
+      'createdAt': dateTime.now(),
     };
   }
 }

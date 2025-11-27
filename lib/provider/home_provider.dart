@@ -8,7 +8,7 @@ class HomeProvider extends ChangeNotifier {
 
   int selectedIndex = 0;
   bool showPinnedOnly = false;
-  String selectedSort = "Soonest";
+  String selectedSort = 'Newest';
 
   final List<String> titles = ["Home", "Task", "Profile", "Notification"];
 
@@ -29,11 +29,13 @@ class HomeProvider extends ChangeNotifier {
   }
 
   void onItemTapped(int index) {
-    if (index == 2) return;
-    if (index == 1) {
-      showPinnedOnly = false;
-    }
-    selectedIndex = index > 2 ? index - 1 : index;
+    selectedIndex = index;
+    showPinnedOnly = false; // reset pinned view when switching tabs
+    notifyListeners();
+  }
+
+  void togglePinnedView(bool pinned) {
+    showPinnedOnly = pinned;
     notifyListeners();
   }
 
@@ -76,10 +78,5 @@ class HomeProvider extends ChangeNotifier {
 
   Future<void> deleteTask(String docId) async {
     await FirebaseFirestore.instance.collection('timers').doc(docId).delete();
-  }
-
-  void togglePinnedView(bool pinned) {
-    showPinnedOnly = pinned;
-    notifyListeners();
   }
 }

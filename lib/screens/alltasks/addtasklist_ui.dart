@@ -4,7 +4,6 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:life_timerz/provider/task_provider.dart';
 import 'package:life_timerz/widgets/app_message.dart';
 import 'package:provider/provider.dart';
@@ -71,12 +70,18 @@ class AddTaskListUI extends StatelessWidget {
                       final isPinned = data['isPinned'] ?? false;
                       final isCompleted = data['isCompleted'] ?? false;
 
+                      final isLandscape =
+                          MediaQuery.of(context).orientation ==
+                          Orientation.landscape;
+
                       return Dismissible(
                         key: Key(t.id),
 
                         background: Container(
                           alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.only(left: 20.w),
+                          padding: EdgeInsets.only(
+                            left: isLandscape ? 12.w : 20.w,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(8.r),
@@ -108,13 +113,15 @@ class AddTaskListUI extends StatelessWidget {
                           String? msg;
                           if (direction == DismissDirection.startToEnd) {
                             msg = await taskProvider.markCompleted(t.id);
-                            if (msg != null)
+                            if (msg != null) {
                               showmessage.showSuccess(msg, context);
+                            }
                             return false;
                           } else if (direction == DismissDirection.endToStart) {
                             msg = await taskProvider.deleteTask(index);
-                            if (msg != null)
+                            if (msg != null) {
                               showmessage.showError(msg, context);
+                            }
                             return true;
                           }
                           return false;
@@ -136,7 +143,12 @@ class AddTaskListUI extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12.r),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.15),
+                                color: const Color.fromARGB(
+                                  255,
+                                  212,
+                                  211,
+                                  211,
+                                ).withOpacity(0.15),
                                 blurRadius: 8.r,
                                 offset: Offset(0, 4.h),
                               ),
@@ -154,26 +166,28 @@ class AddTaskListUI extends StatelessWidget {
                                       "${data['category']} - ${data['title']}",
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
-                                        fontSize: 16.sp,
+                                        fontSize: isLandscape ? 11.sp : 16.sp,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    SizedBox(height: 6.h),
-
+                                    SizedBox(height: isLandscape ? 4.h : 6.h),
                                     Row(
                                       children: [
                                         Icon(
                                           Icons.access_time,
-                                          size: 18.sp,
+                                          size: isLandscape ? 14.sp : 20.sp,
                                           color: Colors.black87,
                                         ),
-                                        SizedBox(width: 6.w),
-
-                                        CountdownText(
-                                          targetTime: datetime,
-                                          isCompleted: isCompleted,
-                                          taskId: t.id,
+                                        SizedBox(
+                                          width: isLandscape ? 3.w : 4.w,
+                                        ),
+                                        Expanded(
+                                          child: CountdownText(
+                                            targetTime: datetime,
+                                            isCompleted: isCompleted,
+                                            taskId: t.id,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -186,8 +200,10 @@ class AddTaskListUI extends StatelessWidget {
                                   isPinned
                                       ? Icons.push_pin
                                       : Icons.push_pin_outlined,
-                                  color: isPinned ? Colors.blue : Colors.grey,
-                                  size: 22.sp,
+                                  color: isPinned
+                                      ? const Color.fromARGB(255, 32, 82, 233)
+                                      : Colors.grey,
+                                  size: isLandscape ? 15.sp : 22.sp,
                                 ),
                                 onPressed: () async {
                                   final msg = await taskProvider.togglePin(
@@ -216,63 +232,42 @@ class AddTaskListUI extends StatelessWidget {
 
 class CountdownText extends StatelessWidget {
   final String taskId;
-  final DateTime targetTime;
-  final bool isCompleted;
 
   const CountdownText({
     super.key,
     required this.taskId,
-    required this.targetTime,
-    this.isCompleted = false,
+    required targetTime,
+    required isCompleted,
   });
 
-  Stream<int> _ticker() async* {
-    while (true) {
-      await Future.delayed(const Duration(seconds: 1));
-      yield 1;
-    }
-  }
-
-  String _getRemaining(Map<String, dynamic> taskData) {
-    final bool done = taskData['isCompleted'] ?? false; //manual cmplte
-    final DateTime targetTime = (taskData['datetime'] as Timestamp).toDate();
-    final now = DateTime.now();
-    final diff = targetTime.difference(now);
-
-    if (done) return "Completed!"; //manual
-
-    if (diff.isNegative) return "Completed!"; //automatically
-
-    final days = diff.inDays;
-    final hours = diff.inHours % 24;
-    final minutes = diff.inMinutes % 60;
-    final seconds = diff.inSeconds % 60;
-
+  String _formatDuration(Duration duration) {
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+    final minutes = duration.inMinutes % 60;
+    final seconds = duration.inSeconds % 60;
     return "$days days, $hours hours, $minutes minutes, $seconds seconds";
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
         final task = taskProvider.getTaskById(taskId);
         if (task == null) return SizedBox();
 
-        return StreamBuilder<int>(
-          stream: _ticker(),
-          builder: (context, snapshot) {
-            final remaining = _getRemaining(task.data);
-            final done = task.data['isCompleted'] ?? false;
+        final isCompleted = task.data['isCompleted'] ?? false;
+        final duration = taskProvider.getTaskDuration(taskId);
 
-            return Text(
-              remaining,
-              style: TextStyle(
-                color: done ? Colors.green : Colors.black,
-                fontWeight: done ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12.sp,
-              ),
-            );
-          },
+        return Text(
+          isCompleted ? "Completed!" : _formatDuration(duration),
+          style: TextStyle(
+            color: isCompleted ? Colors.green : Colors.black,
+            fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+            fontSize: isLandscape ? 10.sp : 12.sp,
+          ),
         );
       },
     );

@@ -68,7 +68,7 @@ class TimerProvider extends ChangeNotifier {
         "datetime": Timestamp.fromDate(_selectedDateTime!),
         "isCountDown": _isCountdown,
       };
-      
+
       bool newCompletedStatus = false;
       final now = DateTime.now();
       if (docId != null) {
@@ -120,11 +120,24 @@ class TimerProvider extends ChangeNotifier {
     String? category,
     DateTime? dateTime,
     bool? isCountdown,
+    bool? isCompleted,
   }) {
     _title = title ?? '';
     _category = category ?? 'Personal';
-    _selectedDateTime = dateTime ?? DateTime.now();
+    _selectedDateTime = dateTime;
     _isCountdown = isCountdown ?? false;
+    
+    final now = DateTime.now();
+
+    if (_selectedDateTime != null) {
+      if (isCompleted == true && _selectedDateTime!.isAfter(now)) {
+        // Agar task complete tha lekin naya datetime future me hai
+        _isCountdown = true; // countdown wapas start
+      } else if (_selectedDateTime!.isBefore(now)) {
+        // Agar datetime past me hai
+        _isCountdown = false;
+      }
+    }
 
     notifyListeners();
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -12,37 +13,41 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(16),
-        topRight: Radius.circular(16),
-      ),
+    final bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
+    // Adjust height based on orientation
+    final double iconSize = isLandscape ? 13.sp : 28.sp;
+    final double fontSize = isLandscape ? 8.sp : 12.sp;
+
+    return SafeArea(
+      top: false,
       child: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        currentIndex: selectedIndex >= 2 ? selectedIndex + 1 : selectedIndex,
+        currentIndex: selectedIndex,
         onTap: onItemTapped,
         backgroundColor: const Color.fromARGB(255, 246, 246, 255),
         selectedItemColor: const Color.fromARGB(255, 27, 120, 196),
         unselectedItemColor: Colors.black,
         showUnselectedLabels: true,
-        iconSize: 30,
+        selectedLabelStyle: TextStyle(fontSize: fontSize),
+        unselectedLabelStyle: TextStyle(fontSize: fontSize),
         elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
+        iconSize: iconSize,
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             label: "Home",
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.task_outlined),
             label: "Task",
           ),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: ""),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_2_outlined),
             label: "Profile",
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.notifications_outlined),
             label: "Notification",
           ),

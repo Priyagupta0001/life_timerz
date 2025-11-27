@@ -58,7 +58,7 @@ class SignupAuthProvider extends ChangeNotifier {
           "uid": user.uid,
           "name": name,
           "email": email,
-          "createdAt": DateTime.now(),
+          "createdAt": Timestamp.now(),
         });
 
         _setLoading(false);

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:life_timerz/provider/task_provider.dart';
@@ -23,6 +24,8 @@ class HomeUI extends StatelessWidget {
   ) {
     final title = taskData['title'] ?? '';
     final datetime = (taskData['datetime'] as Timestamp).toDate();
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     showDialog(
       context: context,
@@ -32,102 +35,113 @@ class HomeUI extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20.r),
           ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 20.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Edit Task",
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.close,
-                        color: Colors.black54,
-                        size: 20.sp,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10.h),
-                Text(
-                  "Title",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                    fontSize: 14.sp,
-                  ),
-                ),
-                SizedBox(height: 6.h),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 16.h),
-                Text(
-                  "Time",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                    fontSize: 14.sp,
-                  ),
-                ),
-                SizedBox(height: 6.h),
-                Text(
-                  _formatRemainingTime(datetime),
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 24.h),
-                Center(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 32, 82, 233),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 115.w,
-                        vertical: 12.h,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context); // close dialog
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CreateNewTimerPage(
-                            isEditing: true,
-                            existingTitle: title,
-                            existingDateTime: datetime,
-                            docId: taskId,
-                          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 20.h),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Edit Task",
+                        style: TextStyle(
+                          fontSize: isLandscape ? 14.sp : 20.sp,
+                          fontWeight: FontWeight.bold,
                         ),
-                      );
-                    },
-                    child: Text(
-                      "EDIT",
-                      style: TextStyle(fontSize: 16.sp, color: Colors.white),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: Colors.black54,
+                          size: isLandscape ? 14.sp : 20.sp,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: isLandscape ? 8.h : 10.h),
+                  Text(
+                    "Title",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                      fontSize: isLandscape ? 10.sp : 14.sp,
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 6.h),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: isLandscape ? 12.sp : 16.sp,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: isLandscape ? 10.h : 16.h),
+                  Text(
+                    "Time",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                      fontSize: isLandscape ? 10.sp : 14.sp,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    _formatRemainingTime(datetime),
+                    style: TextStyle(
+                      fontSize: isLandscape ? 12.sp : 16.sp,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: isLandscape ? 12.h : 24.h),
+                  Center(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 32, 82, 233),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isLandscape ? 100.w : 115.w,
+                          vertical: isLandscape ? 8.h : 12.h,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context); // close dialog
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CreateNewTimerPage(
+                              isEditing: true,
+                              existingTitle: taskData['title'],
+                              existingCategory: taskData['category'],
+                              existingDateTime:
+                                  (taskData['datetime'] as Timestamp).toDate(),
+                              existingIsCountdown:
+                                  taskData['isCountDown'] ?? false,
+                              docId: taskId,
+                              existingIsCompleted:
+                                  taskData['isCompleted'] ?? false,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "EDIT",
+                        style: TextStyle(
+                          fontSize: isLandscape ? 12.sp : 16.sp,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -137,11 +151,18 @@ class HomeUI extends StatelessWidget {
 
   String _formatRemainingTime(DateTime targetTime) {
     final now = DateTime.now();
-    final diff = targetTime.difference(now);
-    if (diff.isNegative) return "Completed!";
+    Duration diff = targetTime.difference(now);
+
+    // Clamp negative durations to zero
+    if (diff.isNegative) diff = Duration.zero;
+
     final days = diff.inDays;
     final hours = diff.inHours % 24;
     final minutes = diff.inMinutes % 60;
+
+    // If duration is zero, show completed
+    if (diff == Duration.zero) return "Completed!";
+
     return "$days days, $hours hours, $minutes minutes";
   }
 
@@ -151,8 +172,13 @@ class HomeUI extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     final taskProvider = context.watch<TaskProvider>();
 
+    // Detect if device is in landscape mode
+    final bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Scaffold(
       backgroundColor: Colors.white,
+      extendBody: true,
       appBar: CustomAppBar(
         title: home.titles[home.selectedIndex],
         selectedIndex: home.selectedIndex,
@@ -164,7 +190,7 @@ class HomeUI extends StatelessWidget {
         backgroundColor: const Color.fromARGB(255, 201, 220, 240),
         style: const TextStyle(),
       ),
-      body: _buildBody(context, home, user),
+      body: SafeArea(child: _buildBody(context, home, user)),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -175,18 +201,33 @@ class HomeUI extends StatelessWidget {
                 existingTitle: null,
                 existingDateTime: null,
                 docId: null,
+                existingIsCompleted: null,
               ),
             ),
           );
         },
         backgroundColor: const Color.fromARGB(255, 32, 82, 233),
         shape: const CircleBorder(),
-        child: Icon(Icons.add, size: 30.sp, color: Colors.white),
+        child: Icon(
+          Icons.add,
+          size: isLandscape ? 24.sp : 30.sp,
+          color: Colors.white,
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: CustomBottomNavBar(
-        selectedIndex: home.selectedIndex,
-        onItemTapped: home.onItemTapped,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        bottom: false,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+          child: CustomBottomNavBar(
+            selectedIndex: home.selectedIndex,
+            onItemTapped: (index) => home.onItemTapped(index),
+          ),
+        ),
       ),
     );
   }
@@ -213,131 +254,149 @@ class HomeUI extends StatelessWidget {
       );
     }
 
+    // Detect if device is in landscape mode
+    final bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Padding(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // -------- Top Counts --------
-          StreamBuilder<QuerySnapshot>(
-            stream: home.getAllTasks(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return Center(
-                  child: SizedBox(
-                    width: 24.w,
-                    height: 24.w,
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
+      padding: EdgeInsets.all(isLandscape ? 10.w : 18.w),
+      child: StreamBuilder<QuerySnapshot>(
+        stream: home.getAllTasks(),
+        builder: (context, topSnapshot) {
+          if (!topSnapshot.hasData) {
+            return Center(child: CircularProgressIndicator());
+          }
 
-              final all = snapshot.data!.docs;
-              final pinned = all
-                  .where((doc) => (doc['isPinned'] == true))
-                  .toList();
+          final all = topSnapshot.data!.docs;
+          final pinned = all.where((doc) => doc['isPinned'] == true).toList();
 
-              return Row(
+          return ListView(
+            children: [
+              // -------- TOP COUNTS --------
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _countBox(
-                    title: "Pin Task",
-                    count: pinned.length,
-                    color: const Color.fromARGB(255, 226, 188, 223),
-                    icon: Icons.push_pin_outlined,
-                    iconColor: Colors.red,
-                    onTap: () => home.togglePinnedView(true),
+                  Expanded(
+                    child: _countBox(
+                      title: "Pin Task",
+                      count: pinned.length,
+                      color: const Color.fromARGB(255, 226, 188, 223),
+                      icon: Icons.push_pin_outlined,
+                      iconColor: Colors.red,
+                      onTap: () => home.togglePinnedView(true),
+                    ),
                   ),
-                  _countBox(
-                    title: "Total Task",
-                    count: all.length,
-                    color: const Color.fromARGB(255, 230, 237, 255),
-                    icon: Icons.task_alt_outlined,
-                    iconColor: Colors.blue,
-                    onTap: () => home.togglePinnedView(false),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: _countBox(
+                      title: "Total Task",
+                      count: all.length,
+                      color: const Color.fromARGB(255, 230, 237, 255),
+                      icon: Icons.task_alt_outlined,
+                      iconColor: Colors.blue,
+                      onTap: () => home.togglePinnedView(false),
+                    ),
                   ),
                 ],
-              );
-            },
-          ),
-
-          SizedBox(height: 20.h),
-
-          // ---------- Heading ----------
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                home.showPinnedOnly ? "Pin Tasks" : "All Tasks",
-                style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
               ),
-              GestureDetector(
-                onTap: () => home.onItemTapped(1),
-                child: Row(
-                  children: [
-                    Text(
-                      "view all",
-                      style: TextStyle(
-                        color: const Color.fromARGB(255, 8, 64, 233),
-                        fontSize: 14.sp,
+
+              SizedBox(height: 20.h),
+
+              // ---------- HEADING ----------
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        home.showPinnedOnly ? "Pin Tasks" : "All Tasks",
+                        style: TextStyle(
+                          fontSize: isLandscape ? 16.sp : 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis, //ladscape
                       ),
                     ),
-                    SizedBox(width: 6.w),
-                    CircleAvatar(
-                      radius: 10.r,
-                      backgroundColor: const Color.fromARGB(255, 8, 64, 233),
-                      child: Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12.sp,
-                        color: Colors.white,
-                      ),
+                  ),
+                  GestureDetector(
+                    onTap: () => home.onItemTapped(1),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "view all",
+                            style: TextStyle(
+                              color: const Color.fromARGB(255, 8, 64, 233),
+                              fontSize: isLandscape ? 12.sp : 14.sp,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 6.w),
+                        CircleAvatar(
+                          radius: isLandscape ? 8.r : 9.r,
+                          backgroundColor: const Color.fromARGB(
+                            255,
+                            8,
+                            64,
+                            233,
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward_ios,
+                            size: isLandscape ? 6.sp : 12.sp,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 10.h),
+
+              // -------- TASK LIST (scrolls properly) -------
+              StreamBuilder<QuerySnapshot>(
+                stream: home.showPinnedOnly
+                    ? home.getPinnedTasks()
+                    : home.getAllTasks(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data!.docs;
+
+                  if (docs.isEmpty) {
+                    return Padding(
+                      padding: EdgeInsets.all(20.h),
+                      child: Center(
+                        child: Text(
+                          "No tasks found!",
+                          style: TextStyle(fontSize: 14.sp),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final task = docs[index].data() as Map<String, dynamic>;
+                      final id = docs[index].id;
+                      return _taskTile(context, home, id, task);
+                    },
+                  );
+                },
               ),
             ],
-          ),
-
-          SizedBox(height: 10.h),
-
-          // Pinned or All tasks list
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: home.showPinnedOnly
-                  ? home.getPinnedTasks()
-                  : home.getAllTasks(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(
-                    child: SizedBox(
-                      width: 24.w,
-                      height: 24.w,
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-
-                final docs = snapshot.data!.docs;
-                if (docs.isEmpty) {
-                  return Center(
-                    child: Text(
-                      "No tasks found!",
-                      style: TextStyle(fontSize: 14.sp),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final task = docs[index].data() as Map<String, dynamic>;
-                    final id = docs[index].id;
-                    return _taskTile(context, home, id, task);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -350,42 +409,73 @@ class HomeUI extends StatelessWidget {
     required VoidCallback onTap,
     required Color iconColor,
   }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(18.w),
-          margin: EdgeInsets.symmetric(horizontal: 4.w),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(15.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Icon(icon, color: iconColor, size: 24.sp),
+    final bool isLandscape =
+        WidgetsBinding
+            .instance
+            .platformDispatcher
+            .views
+            .first
+            .physicalSize
+            .width >
+        WidgetsBinding
+            .instance
+            .platformDispatcher
+            .views
+            .first
+            .physicalSize
+            .height;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isLandscape ? 10.w : 18.w,
+          vertical: isLandscape ? 8.h : 16.h,
+        ),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ICON BOX
+            Container(
+              padding: EdgeInsets.all(isLandscape ? 8.w : 15.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10.r),
               ),
-              SizedBox(width: 12.w),
-              Column(
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: isLandscape ? 16.sp : 24.sp,
+              ),
+            ),
+
+            SizedBox(width: isLandscape ? 8.w : 12.w),
+
+            // COUNT + TITLE
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     "$count",
                     style: TextStyle(
-                      fontSize: 24.sp,
+                      fontSize: isLandscape ? 18.sp : 24.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(title, style: TextStyle(fontSize: 14.sp)),
+                  Text(
+                    title,
+                    style: TextStyle(fontSize: isLandscape ? 12.sp : 14.sp),
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -406,35 +496,44 @@ class HomeUI extends StatelessWidget {
     final isCompleted = task['isCompleted'] ?? false;
     final isPinned = task['isPinned'] ?? false;
 
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Dismissible(
       key: Key(id),
+
       background: Container(
         alignment: Alignment.centerLeft,
-        padding: EdgeInsets.only(left: 20.w),
+        padding: EdgeInsets.only(left: isLandscape ? 16.w : 20.w),
         decoration: BoxDecoration(
           color: Colors.green,
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: BorderRadius.circular(isLandscape ? 10.r : 12.r),
         ),
         child: Icon(
           Icons.check_circle_outline,
           color: Colors.white,
-          size: 22.sp,
+          size: isLandscape ? 18.sp : 22.sp,
         ),
       ),
       secondaryBackground: Container(
         alignment: Alignment.centerRight,
-        padding: EdgeInsets.only(right: 20.w),
+        padding: EdgeInsets.only(right: isLandscape ? 16.w : 20.w),
         decoration: BoxDecoration(
           color: Colors.red,
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: BorderRadius.circular(isLandscape ? 10.r : 12.r),
         ),
-        child: Icon(Icons.delete_outline, color: Colors.white, size: 22.sp),
+        child: Icon(
+          Icons.delete_outline,
+          color: Colors.white,
+          size: isLandscape ? 18.sp : 22.sp,
+        ),
       ),
       direction: DismissDirection.horizontal,
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
           await homeProv.markTaskCompleted(id);
-          return false;
+          taskProvider.notifyListeners();
+          return true;
         } else if (direction == DismissDirection.endToStart) {
           await homeProv.deleteTask(id);
           return true;
@@ -444,16 +543,16 @@ class HomeUI extends StatelessWidget {
       child: GestureDetector(
         onTap: () => showCustomEditDialog(context, id, task),
         child: Container(
-          margin: EdgeInsets.only(bottom: 14.h),
-          padding: EdgeInsets.all(12.w),
+          margin: EdgeInsets.only(bottom: isLandscape ? 10.h : 14.h),
+          padding: EdgeInsets.all(isLandscape ? 10.w : 12.w),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(isLandscape ? 10.r : 12.r),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withValues(alpha: 0.1),
-                blurRadius: 6.r,
-                offset: Offset(0, 2.h),
+                blurRadius: isLandscape ? 4.r : 6.r,
+                offset: Offset(0, isLandscape ? 1.h : 2.h),
               ),
             ],
           ),
@@ -468,16 +567,19 @@ class HomeUI extends StatelessWidget {
                       "$category - $title",
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 16.sp,
+                        fontSize: isLandscape ? 12.sp : 16.sp,
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
-                    SizedBox(height: 6.h),
+                    SizedBox(height: isLandscape ? 4.h : 6.h),
                     Row(
                       children: [
-                        Icon(Icons.access_time, size: 20.sp),
-                        SizedBox(width: 4.w),
+                        Icon(
+                          Icons.access_time,
+                          size: isLandscape ? 14.sp : 20.sp,
+                        ),
+                        SizedBox(width: isLandscape ? 3.w : 4.w),
                         Expanded(
                           child: CountdownText(
                             taskId: id,
@@ -496,7 +598,7 @@ class HomeUI extends StatelessWidget {
                   color: isPinned
                       ? const Color.fromARGB(255, 8, 64, 233)
                       : Colors.grey,
-                  size: 22.sp,
+                  size: isLandscape ? 15.sp : 22.sp,
                 ),
                 onPressed: () async {
                   await taskProvider.togglePin(id);
@@ -519,57 +621,46 @@ class CountdownText extends StatelessWidget {
     super.key,
     required this.taskId,
     required this.targetTime,
-    this.isCompleted = false,
+    required this.isCompleted,
   });
 
-  Stream<int> _ticker() async* {
-    while (true) {
-      await Future.delayed(const Duration(seconds: 1));
-      yield 1;
-    }
-  }
-
-  String _getRemaining(Map<String, dynamic> taskData) {
-    final bool done = taskData['isCompleted'] ?? false;
-    final DateTime targetTime = (taskData['datetime'] as Timestamp).toDate();
-    final now = DateTime.now();
-    final diff = targetTime.difference(now);
-
-    if (done) return "Completed!";
-    if (diff.isNegative) return "Completed!";
-
-    final days = diff.inDays;
-    final hours = diff.inHours % 24;
-    final minutes = diff.inMinutes % 60;
-    final seconds = diff.inSeconds % 60;
-
+  String _formatDuration(Duration duration) {
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+    final minutes = duration.inMinutes % 60;
+    final seconds = duration.inSeconds % 60;
     return "$days days, $hours hours, $minutes minutes, $seconds seconds";
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
         final task = taskProvider.getTaskById(taskId);
         if (task == null) return SizedBox();
 
-        return StreamBuilder<int>(
-          stream: _ticker(),
-          builder: (context, snapshot) {
-            final remaining = _getRemaining(task.data);
-            final done = task.data['isCompleted'] ?? false;
+        final isCompleted = task.data['isCompleted'] ?? false;
+        final isCountdown = task.data['isCountDown'] ?? true;
+        final duration = taskProvider.getTaskDuration(taskId);
 
-            return Text(
-              remaining,
-              style: TextStyle(
-                color: done ? Colors.green : Colors.black,
-                fontWeight: done ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12.sp,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            );
-          },
+        // Agar task complete hai ya countdown off ya time past → show Completed
+        final showCompleted =
+            isCompleted || !isCountdown || duration.isNegative;
+
+        final displayText = showCompleted
+            ? "Completed!"
+            : _formatDuration(duration);
+
+        return Text(
+          displayText,
+          style: TextStyle(
+            color: showCompleted ? Colors.green : Colors.black,
+            fontWeight: showCompleted ? FontWeight.bold : FontWeight.normal,
+            fontSize: isLandscape ? 10.sp : 12.sp,
+          ),
         );
       },
     );

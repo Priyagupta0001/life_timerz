@@ -291,7 +291,7 @@ class _LogInUIState extends State<LogInUI> {
                           onPressed: () {},
                           style: OutlinedButton.styleFrom(
                             padding: EdgeInsets.symmetric(
-                              vertical: 12.h,
+                              vertical: 15.h,
                               horizontal: 10.w,
                             ),
                             shape: RoundedRectangleBorder(
@@ -324,7 +324,7 @@ class _LogInUIState extends State<LogInUI> {
                           },
                           style: OutlinedButton.styleFrom(
                             padding: EdgeInsets.symmetric(
-                              vertical: 12.h,
+                               vertical: 11.h,
                               horizontal: 10.w,
                             ),
                             shape: RoundedRectangleBorder(

@@ -14,6 +14,7 @@ class CreateNewTimerPage extends StatefulWidget {
   final String? existingCategory;
   final DateTime? existingDateTime;
   final bool? existingIsCountdown;
+  final bool? existingIsCompleted;
 
   const CreateNewTimerPage({
     super.key,
@@ -23,6 +24,7 @@ class CreateNewTimerPage extends StatefulWidget {
     this.existingCategory,
     this.existingDateTime,
     this.existingIsCountdown,
+    required this.existingIsCompleted,
   });
 
   @override
@@ -30,23 +32,28 @@ class CreateNewTimerPage extends StatefulWidget {
 }
 
 class _CreateNewTimerPageState extends State<CreateNewTimerPage> {
+  late TextEditingController _titleController;
+
   @override
   void initState() {
     super.initState();
+    final provider = Provider.of<TimerProvider>(context, listen: false);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<TimerProvider>(context, listen: false);
+    if (widget.isEditing) {
+      provider.initialize(
+        title: widget.existingTitle,
+        category: widget.existingCategory,
+        dateTime: widget.existingDateTime,
+        isCountdown: widget.existingIsCountdown,
+        isCompleted: widget.existingIsCompleted,
+      );
+    } else {
+      provider.reset();
+    }
 
-      if (widget.isEditing) {
-        provider.initialize(
-          title: widget.existingTitle,
-          category: widget.existingCategory,
-          dateTime: widget.existingDateTime,
-          isCountdown: widget.existingIsCountdown,
-        );
-      } else {
-        provider.reset(); // blank form for create
-      }
+    _titleController = TextEditingController(text: provider.title);
+    _titleController.addListener(() {
+      provider.setTitle(_titleController.text);
     });
   }
 
@@ -87,6 +94,9 @@ class _CreateNewTimerPageState extends State<CreateNewTimerPage> {
     final showmessage = Provider.of<AppMessageProvider>(context, listen: false);
 
     final result = await provider.saveOrUpdateTimer(docId: widget.docId);
+    print("Save result: $result"); // Debug
+
+    if (!mounted) return;
 
     switch (result) {
       case "title-empty":
@@ -94,6 +104,9 @@ class _CreateNewTimerPageState extends State<CreateNewTimerPage> {
         break;
       case "date-empty":
         showmessage.showError("Please select date & time", context);
+        break;
+      case "category-empty":
+        showmessage.showError("Please select category", context);
         break;
       case "no-user":
         showmessage.showError("Please login to create timer", context);
@@ -116,13 +129,8 @@ class _CreateNewTimerPageState extends State<CreateNewTimerPage> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<TimerProvider>();
-
-    // if (widget.isEditing && provider.title.isEmpty) {
-    //   provider.setTitle(widget.existingTitle ?? '');
-    //   if (widget.existingDateTime != null) {
-    //     provider.setDateTime(widget.existingDateTime!);
-    //   }
-    // }
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -130,164 +138,230 @@ class _CreateNewTimerPageState extends State<CreateNewTimerPage> {
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 222, 222, 230),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: 20.sp),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.black,
+            size: isLandscape ? 8.sp : 20.sp,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.isEditing ? "Edit Timer" : "New Timer",
           style: TextStyle(
             color: Colors.black,
-            fontSize: 18.sp,
+            fontSize: isLandscape ? 11.sp : 18.sp,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
+        toolbarHeight: isLandscape ? 45.h : 60.h,
+        leadingWidth: isLandscape ? 35.w : 50.w,
       ),
-
-      body: Padding(
-        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// TITLE
-            TextFormField(
-              onChanged: provider.setTitle,
-              initialValue: provider.title,
-              style: TextStyle(fontSize: 16.sp),
-              decoration: InputDecoration(
-                labelText: 'Title',
-                labelStyle: TextStyle(color: Colors.black, fontSize: 14.sp),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6.r),
-                ),
-              ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              vertical: isLandscape ? 20.h : 40.h,
+              horizontal: 20.w,
             ),
-            SizedBox(height: 15.h),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// TITLE
+                    TextFormField(
+                      controller: _titleController,
+                      onChanged: provider.setTitle,
+                      style: TextStyle(fontSize: isLandscape ? 12.sp : 16.sp),
+                      decoration: InputDecoration(
+                        labelText: 'Title',
+                        labelStyle: TextStyle(
+                          color: Colors.black,
+                          fontSize: isLandscape ? 11.sp : 14.sp,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: isLandscape ? 8.h : 12.h,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isLandscape ? 10.h : 15.h),
 
-            /// CATEGORY DROPDOWN
-            DropdownButtonFormField<String>(
-              style: TextStyle(fontSize: 15.sp, color: Colors.black87),
-              decoration: InputDecoration(
-                labelText: 'Category',
-                labelStyle: TextStyle(fontSize: 14.sp),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-              ),
-              value: provider.category.isNotEmpty ? provider.category : null,
-              items:
-                  [
-                        'Work',
-                        'Study',
-                        'Fitness',
-                        'Shopping',
-                        'Sleep',
-                        'Personal',
-                        'Fun',
-                        'Art',
-                        'Business Work',
-                      ]
-                      .map(
-                        (cat) => DropdownMenuItem(
-                          value: cat,
-                          child: Text(
-                            cat,
+                    /// CATEGORY DROPDOWN
+                    DropdownButtonFormField<String>(
+                      style: TextStyle(
+                        fontSize: isLandscape ? 12.sp : 15.sp,
+                        color: Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Category',
+                        labelStyle: TextStyle(
+                          fontSize: isLandscape ? 11.sp : 14.sp,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: isLandscape ? 6.h : 12.h,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                      ),
+                      value: provider.category.isNotEmpty
+                          ? provider.category
+                          : null,
+                      items:
+                          [
+                                'Work',
+                                'Study',
+                                'Fitness',
+                                'Shopping',
+                                'Sleep',
+                                'Personal',
+                                'Fun',
+                                'Art',
+                                'Business Work',
+                              ]
+                              .map(
+                                (cat) => DropdownMenuItem(
+                                  value: cat,
+                                  child: Text(
+                                    cat,
+                                    style: TextStyle(
+                                      fontSize: isLandscape ? 12.sp : 15.sp,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (val) {
+                        if (val != null) provider.setCategory(val);
+                      },
+                    ),
+
+                    SizedBox(height: 20.h),
+
+                    /// DATE TIME PICKER
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => _selectDateTime(context),
+                          icon: Icon(
+                            Icons.calendar_today_outlined,
+                            color: Colors.white,
+                            size: isLandscape ? 12.sp : 18.sp,
+                          ),
+                          label: Text(
+                            "Select date & time",
                             style: TextStyle(
-                              fontSize: 15.sp,
-                              color: Colors.black87,
+                              color: Colors.white,
+                              fontSize: isLandscape ? 10.sp : 14.sp,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              32,
+                              82,
+                              233,
+                            ),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isLandscape ? 12.w : 25.w,
+                              vertical: isLandscape ? 8.h : 14.h,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.r),
                             ),
                           ),
                         ),
-                      )
-                      .toList(),
-              onChanged: (val) {
-                if (val != null) provider.setCategory(val);
-              },
-            ),
-
-            SizedBox(height: 20.h),
-
-            /// DATE TIME PICKER
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _selectDateTime(context),
-                  icon: Icon(
-                    Icons.calendar_today_outlined,
-                    color: Colors.white,
-                    size: 18.sp,
-                  ),
-                  label: Text(
-                    "Select date & time",
-                    style: TextStyle(color: Colors.white, fontSize: 14.sp),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 32, 82, 233),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 25.w,
-                      vertical: 14.h,
+                        SizedBox(
+                          width: 140.w,
+                          child: Text(
+                            provider.selectedDateTime != null
+                                ? DateFormat(
+                                    'MMM d, yyyy hh:mm a',
+                                  ).format(provider.selectedDateTime!)
+                                : "No date selected",
+                            style: TextStyle(
+                              fontSize: isLandscape ? 9.sp : 12.sp,
+                            ),
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
+
+                    SizedBox(height: 20.h),
+
+                    /// COUNTDOWN SWITCH BOX
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isLandscape ? 10.w : 16.w,
+                        vertical: isLandscape ? 6.h : 10.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(146, 236, 224, 224),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Is this a countdown timer?',
+                            maxLines: 1,
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontSize: isLandscape ? 12.sp : 16.sp,
+                            ),
+                          ),
+                          SizedBox(width: 10.w),
+                          Transform.scale(
+                            scale: isLandscape ? 0.8 : 1.0,
+                            child: Switch(
+                              value: provider.isCountdown,
+                              onChanged: provider.setCountdown,
+                              activeThumbColor: const Color.fromARGB(
+                                255,
+                                32,
+                                82,
+                                233,
+                              ),
+                              activeTrackColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+
+                    const Spacer(), // ensures bottom buttons are pushed down
+                  ],
                 ),
-
-                SizedBox(
-                  width: 140.w,
-                  child: Text(
-                    provider.selectedDateTime != null
-                        ? DateFormat(
-                            'MMM d, yyyy hh:mm a',
-                          ).format(provider.selectedDateTime!)
-                        : "No date selected",
-                    style: TextStyle(fontSize: 12.sp),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: 20.h),
-
-            /// COUNTDOWN SWITCH BOX
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(146, 236, 224, 224),
-                borderRadius: BorderRadius.circular(6.r),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Is this a countdown timer?',
-                    style: TextStyle(color: Colors.black87, fontSize: 16.sp),
-                  ),
-                  Switch(
-                    value: provider.isCountdown,
-                    onChanged: provider.setCountdown,
-                    activeThumbColor: const Color.fromARGB(255, 32, 82, 233),
-                    activeTrackColor: Colors.white,
-                  ),
-                ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
-
-      /// BOTTOM BUTTONS
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: EdgeInsets.only(left: 20.w, right: 20.w, bottom: 40.h),
+          padding: EdgeInsets.only(
+            left: isLandscape ? 15.w : 20.w,
+            right: isLandscape ? 22.w : 20.w,
+            bottom: isLandscape ? 20.h : 40.h,
+          ),
           child: Row(
             children: [
               /// CANCEL
               Expanded(
                 child: SizedBox(
-                  height: 46.h,
+                  height: isLandscape ? 40.h : 46.h,
                   child: ElevatedButton(
                     onPressed: provider.isLoading
                         ? null
@@ -300,18 +374,21 @@ class _CreateNewTimerPageState extends State<CreateNewTimerPage> {
                     ),
                     child: Text(
                       'CANCEL',
-                      style: TextStyle(color: Colors.black87, fontSize: 16.sp),
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: isLandscape ? 12.sp : 16.sp,
+                      ),
                     ),
                   ),
                 ),
               ),
 
-              SizedBox(width: 12.w),
+              SizedBox(width: isLandscape ? 8.w : 12.w),
 
               /// CONFIRM
               Expanded(
                 child: SizedBox(
-                  height: 46.h,
+                  height: isLandscape ? 40.h : 46.h,
                   child: ElevatedButton(
                     onPressed: provider.isLoading
                         ? null
@@ -324,8 +401,8 @@ class _CreateNewTimerPageState extends State<CreateNewTimerPage> {
                     ),
                     child: provider.isLoading
                         ? SizedBox(
-                            width: 20.w,
-                            height: 20.w,
+                            width: isLandscape ? 16.w : 20.w,
+                            height: isLandscape ? 16.w : 20.w,
                             child: CircularProgressIndicator(
                               color: Colors.white,
                               strokeWidth: 2.w,
@@ -335,7 +412,7 @@ class _CreateNewTimerPageState extends State<CreateNewTimerPage> {
                             'CONFIRM',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 16.sp,
+                              fontSize: isLandscape ? 12.sp : 16.sp,
                             ),
                           ),
                   ),

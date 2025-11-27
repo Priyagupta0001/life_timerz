@@ -23,11 +23,13 @@ class TaskProvider extends ChangeNotifier {
 
   final Set<String> _notifiedTaskIds = {};
   StreamSubscription? _taskStream;
-  Timer? _timer;
+
+  // Timer maps for countdown/forward logic
+  final Map<String, Duration> _taskDurations = {}; // taskId -> duration
+  final Map<String, Timer?> _timers = {}; // taskId -> Timer
 
   TaskProvider() {
     _init();
-    _startCompletionChecker();
   }
 
   void _init() {
@@ -39,13 +41,22 @@ class TaskProvider extends ChangeNotifier {
         .snapshots()
         .listen((snapshot) {
           _tasks = snapshot.docs.map((doc) {
-            return _LocalTask(
+            final task = _LocalTask(
               id: doc.id,
               data: Map<String, dynamic>.from(
                 doc.data() as Map<String, dynamic>,
               ),
               ref: doc.reference,
             );
+
+            // Start timer for this task
+            final isCountdown = task.data['isCountDown'] ?? false;
+            final isCompleted = task.data['isCompleted'] ?? false;
+            final datetime =
+                _parseDate(task.data['datetime']) ?? DateTime.now();
+            startTimerForTask(task.id, datetime, isCountdown, isCompleted);
+
+            return task;
           }).toList();
 
           _runNotificationTriggers();
@@ -53,48 +64,60 @@ class TaskProvider extends ChangeNotifier {
         });
   }
 
+  /// Countdown / Forward timer logic
+  void startTimerForTask(
+    String taskId,
+    DateTime targetTime,
+    bool isCountdown,
+    bool isCompleted,
+  ) {
+    _timers[taskId]?.cancel();
+
+    if (isCompleted) {
+      _taskDurations[taskId] = Duration.zero;
+      notifyListeners();
+      return;
+    }
+
+    _taskDurations[taskId] = isCountdown
+        ? targetTime.difference(DateTime.now())
+        : DateTime.now().difference(targetTime);
+
+    _timers[taskId] = Timer.periodic(Duration(seconds: 1), (_) {
+      final now = DateTime.now();
+      if (isCountdown) {
+        final diff = targetTime.difference(now);
+        _taskDurations[taskId] = diff.isNegative ? Duration.zero : diff;
+        // Auto-complete task if countdown is finished
+        if (diff.isNegative) {
+          stopTimerForTask(taskId);
+          markCompleted(taskId); // Automatically mark as complete
+        }
+      } else {
+        _taskDurations[taskId] = now.difference(targetTime);
+        // Forward timer → user manually marks complete
+      }
+
+      notifyListeners();
+    });
+  }
+
+  Duration getTaskDuration(String taskId) =>
+      _taskDurations[taskId] ?? Duration.zero;
+
+  void stopTimerForTask(String taskId) {
+    _timers[taskId]?.cancel();
+    _timers.remove(taskId);
+  }
+
   void setSort(String sort) {
     selectedSort = sort;
-
     notifyListeners();
   }
 
   void setShowPinnedOnly(bool show) {
     showPinnedOnly = show;
-
     notifyListeners();
-  }
-
-  /// Timer-based automatic completion check
-  void _startCompletionChecker() {
-    _timer?.cancel();
-    _timer = Timer.periodic(Duration(seconds: 5), (_) async {
-      final now = DateTime.now();
-      bool updated = false;
-
-      for (var i = 0; i < _tasks.length; i++) {
-        final t = _tasks[i];
-        if (t.data['isCompleted'] == true) continue;
-
-        final datetime = _parseDate(t.data['datetime']);
-        if (datetime == null) continue; // ignore invalid dates
-        if (datetime.isAfter(now)) continue; // future task → skip
-
-        // mark task completed
-        final updatedData = Map<String, dynamic>.from(t.data);
-        updatedData['isCompleted'] = true;
-        updatedData['completedAt'] = FieldValue.serverTimestamp();
-        _tasks[i] = t.copyWith(data: updatedData);
-
-        try {
-          await t.ref.update(updatedData);
-        } catch (_) {}
-
-        updated = true;
-      }
-
-      if (updated) notifyListeners();
-    });
   }
 
   Future<String?> togglePin(String id) async {
@@ -122,6 +145,7 @@ class TaskProvider extends ChangeNotifier {
     updated['isCompleted'] = true;
     updated['completedAt'] = FieldValue.serverTimestamp();
     _tasks[idx] = _tasks[idx].copyWith(data: updated);
+    stopTimerForTask(id); // stop timer when completed
     notifyListeners();
 
     try {
@@ -137,6 +161,7 @@ class TaskProvider extends ChangeNotifier {
 
     final task = _tasks[index];
     _tasks.removeAt(index);
+    stopTimerForTask(task.id);
     notifyListeners();
 
     try {
@@ -155,7 +180,7 @@ class TaskProvider extends ChangeNotifier {
         .where((e) => e.data['isCompleted'] ?? false)
         .toList();
 
-    // Apply sorting to activeTasks
+    // Active sorting
     switch (selectedSort) {
       case 'Newest':
         activeTasks.sort(
@@ -202,7 +227,7 @@ class TaskProvider extends ChangeNotifier {
         break;
     }
 
-    // Sort completed tasks
+    // Completed tasks sort
     completedTasks.sort(
       (a, b) =>
           (_parseDate(b.data['completedAt'] ?? b.data['datetime']) ??
@@ -214,11 +239,8 @@ class TaskProvider extends ChangeNotifier {
     );
 
     List<_LocalTask> allTasks = [...activeTasks, ...completedTasks];
-
-    if (showPinnedOnly) {
+    if (showPinnedOnly)
       allTasks = allTasks.where((e) => e.data['isPinned'] == true).toList();
-    }
-
     return allTasks;
   }
 
@@ -235,7 +257,6 @@ class TaskProvider extends ChangeNotifier {
 
   Future<void> _runNotificationTriggers() async {
     final now = DateTime.now();
-
     for (var t in _tasks) {
       final id = t.id;
       final title = t.data['title'] ?? 'Untitled Task';
@@ -245,7 +266,6 @@ class TaskProvider extends ChangeNotifier {
       final isCompleted = t.data['isCompleted'] ?? false;
       final diff = datetime.difference(now);
 
-      // Completed notification
       if (isCompleted &&
           !(t.data['isCompletedNotificationSent'] ?? false) &&
           !_notifiedTaskIds.contains("$id-completed")) {
@@ -257,7 +277,6 @@ class TaskProvider extends ChangeNotifier {
         t.ref.update({'isCompletedNotificationSent': true});
       }
 
-      // 1 hour left notification
       if (!isCompleted &&
           diff.inMinutes <= 60 &&
           diff.inMinutes > 0 &&
@@ -270,7 +289,6 @@ class TaskProvider extends ChangeNotifier {
         await t.ref.update({'isOneHourNotificationSent': true});
       }
 
-      // 24 hours left notification
       if (!isCompleted &&
           diff.inHours <= 24 &&
           diff.inHours > 1 &&
@@ -295,7 +313,7 @@ class TaskProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _timers.forEach((_, t) => t?.cancel());
     _taskStream?.cancel();
     super.dispose();
   }
