@@ -120,13 +120,10 @@ class HomeUI extends StatelessWidget {
                               isEditing: true,
                               existingTitle: taskData['title'],
                               existingCategory: taskData['category'],
-                              existingDateTime:
-                                  (taskData['datetime'] as Timestamp).toDate(),
-                              existingIsCountdown:
-                                  taskData['isCountDown'] ?? false,
+                              existingDateTime: taskData['datetime'].toDate(),
+                              existingIsCountdown: taskData['isCountDown'],
                               docId: taskId,
-                              existingIsCompleted:
-                                  taskData['isCompleted'] ?? false,
+                              existingIsCompleted: taskData['isCompleted'],
                             ),
                           ),
                         );
@@ -532,11 +529,10 @@ class HomeUI extends StatelessWidget {
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
           await homeProv.markTaskCompleted(id);
-          taskProvider.notifyListeners();
-          return true;
+          return false;
         } else if (direction == DismissDirection.endToStart) {
           await homeProv.deleteTask(id);
-          return true;
+          return false;
         }
         return false;
       },

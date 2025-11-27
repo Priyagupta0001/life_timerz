@@ -259,13 +259,22 @@ class CountdownText extends StatelessWidget {
         if (task == null) return SizedBox();
 
         final isCompleted = task.data['isCompleted'] ?? false;
+        final isCountdown = task.data['isCountDown'] ?? true;
         final duration = taskProvider.getTaskDuration(taskId);
 
+        // Agar task complete hai ya countdown off ya time past → show Completed
+        final showCompleted =
+            isCompleted || !isCountdown || duration.isNegative;
+
+        final displayText = showCompleted
+            ? "Completed!"
+            : _formatDuration(duration);
+
         return Text(
-          isCompleted ? "Completed!" : _formatDuration(duration),
+          displayText,
           style: TextStyle(
-            color: isCompleted ? Colors.green : Colors.black,
-            fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+            color: showCompleted ? Colors.green : Colors.black,
+            fontWeight: showCompleted ? FontWeight.bold : FontWeight.normal,
             fontSize: isLandscape ? 10.sp : 12.sp,
           ),
         );
