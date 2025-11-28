@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:life_timerz/screens/home/home_ui.dart';
@@ -27,6 +28,12 @@ void main() async {
 
   await Future.delayed(const Duration(seconds: 2));
   FlutterNativeSplash.remove();
+
+    // Sirf portrait modes allow karne ke liye
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   runApp(const MyApp());
 }
